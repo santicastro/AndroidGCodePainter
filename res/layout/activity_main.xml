@@ -1,0 +1,146 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity" >
+
+    <ImageView
+        android:id="@+id/drawBackground"
+        android:layout_width="wrap_content"
+        android:layout_height="fill_parent"
+        android:layout_alignBottom="@+id/drawView"
+        android:layout_alignLeft="@+id/drawView"
+        android:layout_alignRight="@+id/drawView"
+        android:layout_alignTop="@+id/drawView"
+        android:background="@color/etch_background"
+        android:contentDescription="background" />
+
+    <es.skastro.gcodepainter.view.DrawView
+        android:id="@+id/drawView"
+        android:layout_width="694dp"
+        android:layout_height="470dp"
+        android:layout_alignParentRight="true"
+        android:background="@android:color/transparent"
+        android:focusable="true"
+        android:focusableInTouchMode="true" />
+
+    <LinearLayout
+        android:id="@+id/buttonlayout"
+        style="?android:attr/buttonBarStyle"
+        android:layout_width="267dp"
+        android:layout_height="fill_parent"
+        android:layout_alignParentLeft="true"
+        android:orientation="vertical" >
+
+        <!-- TOOLS -->
+
+        <TextView
+            style="@style/buttonBarTitleStyle"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="FERRAMENTAS" />
+
+        <LinearLayout
+            android:layout_width="267dp"
+            android:layout_height="50dp"
+            android:orientation="horizontal" >
+
+            <Button
+                android:id="@+id/buttonDrawLine"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="133dp"
+                android:layout_height="50dp"
+                android:drawableLeft="@drawable/line"
+                android:text="Lápis" />
+
+            <Button
+                android:id="@+id/buttonDrawInkpad"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="133dp"
+                android:layout_height="50dp"
+                android:drawableLeft="@drawable/inkpad"
+                android:text="Tampón" />
+        </LinearLayout>
+        <!-- EDIT -->
+
+        <TextView
+            style="@style/buttonBarTitleStyle"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="EDICIÓN" />
+
+        <Button
+            android:id="@+id/buttonUndo"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="fill_parent"
+            android:layout_height="50dp"
+            android:drawableLeft="@drawable/undo_32x32"
+            android:enabled="false"
+            android:text="Desfacer" />
+
+        <!-- BLUETOOTH -->
+
+        <TextView
+            style="@style/buttonBarTitleStyle"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="BLUETOOTH" />
+
+        <Button
+            android:id="@+id/buttonConnect"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="fill_parent"
+            android:layout_height="50dp"
+            android:background="@color/light_red"
+            android:drawableLeft="@drawable/bluetooth_on"
+            android:padding="0dp"
+            android:text="Conectar" />
+
+        <!-- CONECTION -->
+
+        <TextView
+            style="@style/buttonBarTitleStyle"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="CONEXIÓN" />
+
+        <CheckBox
+            android:id="@+id/chkAutomaticSend"
+            android:layout_width="fill_parent"
+            android:layout_height="50dp"
+            android:text="Enviar automáticamente" />
+
+        <Button
+            android:id="@+id/btnSend"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="fill_parent"
+            android:layout_height="50dp"
+            android:text="Enviar pendentes" />
+
+        <View
+            style="@style/buttonBarTitleStyle"
+            android:layout_width="fill_parent"
+            android:layout_height="2dp" />
+
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="Enviados 3/15"
+            android:visibility="gone"/>
+
+        <ProgressBar
+            android:id="@+id/pbSent"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="fill_parent"
+            android:layout_height="25dp"
+            android:max="100"
+            android:progress="25"
+            android:visibility="gone"/>
+
+        <View
+            style="@style/buttonBarTitleStyle"
+            android:layout_width="fill_parent"
+            android:layout_height="10dp" />
+    </LinearLayout>
+
+</RelativeLayout>

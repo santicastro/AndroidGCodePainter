@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <color name="title_background">#36322d</color>
+    <color name="etch_background">#e4ccbf</color>
+    <color name="etch_red">#ff0900</color>
+    <color name="light_red">#f28888</color>
+    <color name="light_green">#8af288</color>
+    <color name="light_blue">#9cd9ff</color>
+
+</resources>

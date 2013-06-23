@@ -1,0 +1,66 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <item
+        android:id="@+id/mnuNew"
+        android:icon="@drawable/newfile"
+        android:orderInCategory="100"
+        android:showAsAction="always|withText"
+        android:title="Novo"/>
+    <item
+        android:id="@+id/mnuOpen"
+        android:icon="@drawable/open"
+        android:orderInCategory="100"
+        android:showAsAction="always|withText"
+        android:title="Abrir"/>
+    <item
+        android:id="@+id/mnuSave"
+        android:icon="@drawable/save"
+        android:orderInCategory="100"
+        android:showAsAction="always|withText"
+        android:title="Gardar"/>
+    <item
+        android:icon="@drawable/background"
+        android:orderInCategory="100"
+        android:showAsAction="always|withText"
+        android:title="Fondo">
+        <menu>
+            <item
+                android:id="@+id/mnuBackgroundFile"
+                android:icon="@drawable/gallery"
+                android:orderInCategory="100"
+                android:showAsAction="always|withText"
+                android:title="Arquivo"/>
+            <item
+                android:id="@+id/mnuBackgroundCamera"
+                android:icon="@drawable/camera"
+                android:orderInCategory="100"
+                android:showAsAction="always|withText"
+                android:title="Cámara"/>
+            <item
+                android:id="@+id/mnuBackgroundRemove"
+                android:icon="@drawable/icon_cross"
+                android:orderInCategory="100"
+                android:showAsAction="always|withText"
+                android:title="Eliminar"/>
+        </menu>
+    </item>
+    <item
+        android:id="@+id/mnuInkpad"
+        android:icon="@drawable/inkpad_plus"
+        android:orderInCategory="100"
+        android:showAsAction="always|withText"
+        android:title="Crear Tampón"/>
+    <item
+        android:id="@+id/mnuSettings"
+        android:icon="@drawable/icon_preferences"
+        android:orderInCategory="100"
+        android:showAsAction="always|withText"
+        android:title="Opcións"/>
+    <item
+        android:id="@+id/mnuQuit"
+        android:icon="@drawable/icon_quit"
+        android:orderInCategory="100"
+        android:showAsAction="always|withText"
+        android:title="Saír"/>
+
+</menu>
