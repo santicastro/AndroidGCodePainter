@@ -1,4 +1,6 @@
-package es.skastro.gcodepainter.draw;
+package es.skastro.gcodepainter.gcode;
+
+import es.skastro.gcodepainter.draw.document.Point;
 
 public class GCodeInstruction {
 

@@ -1,4 +1,4 @@
-package es.skastro.gcodepainter.draw.inkpad;
+package es.skastro.gcodepainter.draw.tool.inkpad;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -13,21 +13,22 @@ import org.codehaus.jackson.annotate.JsonProperty;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 
-import es.skastro.gcodepainter.draw.DrawFile;
-import es.skastro.gcodepainter.draw.Point;
+import es.skastro.gcodepainter.draw.document.Document;
+import es.skastro.gcodepainter.draw.document.Point;
+import es.skastro.gcodepainter.draw.document.TracePoint;
 
 public class Inkpad {
 
     @JsonProperty("points")
-    List<Point> points;
+    List<TracePoint> points;
 
     private static ObjectMapper mapper;
     static {
         mapper = new ObjectMapper();
     }
 
-    public static Inkpad fromDrawFile(DrawFile file) {
-        List<Point> points = file.getPoints();
+    public static Inkpad fromDrawFile(Document file) {
+        List<TracePoint> points = file.getPoints();
         if (points.size() > 0)
             points.remove(0);
         return new Inkpad(points);
@@ -49,14 +50,14 @@ public class Inkpad {
     public Inkpad() {
     }
 
-    public Inkpad(List<Point> points) {
-        this.points = new ArrayList<Point>();
+    public Inkpad(List<TracePoint> points) {
+        this.points = new ArrayList<TracePoint>();
         if (points.size() > 0) {
 
-            this.points.add(new Point(0.0, 0.0));
-            Point origin = points.get(0);
+            this.points.add(new TracePoint(new Point(0.0, 0.0)));
+            Point origin = points.get(0).getPoint();
             for (int i = 1; i < points.size(); i++) {
-                this.points.add(Point.minus(points.get(i), origin));
+                this.points.add(new TracePoint(Point.minus(points.get(i).getPoint(), origin)));
             }
         }
     }
@@ -73,10 +74,12 @@ public class Inkpad {
         FileUtils.copyFile(tmp, file);
     }
 
-    public List<Point> getPoints(Point basePoint, double scale) {
-        List<Point> res = new ArrayList<Point>(points.size());
-        for (Point p : points) {
-            res.add(new Point(p.getX() * scale + basePoint.getX(), p.getY() * scale + basePoint.getY()));
+    public List<TracePoint> getPoints(Point basePoint, double scale, double angle) {
+        List<TracePoint> res = new ArrayList<TracePoint>(points.size());
+        for (TracePoint p : points) {
+            Point rotated = Point.rotate(p.getPoint(), angle);
+            res.add(new TracePoint(new Point(rotated.getX() * scale + basePoint.getX(), rotated.getY() * scale
+                    + basePoint.getY())));
         }
         return res;
     }

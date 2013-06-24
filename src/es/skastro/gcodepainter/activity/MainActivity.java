@@ -1,4 +1,4 @@
-package es.skastro.gcodepainter;
+package es.skastro.gcodepainter.activity;
 
 import java.io.File;
 import java.io.FileFilter;
@@ -20,33 +20,40 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
-import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.view.ContextMenu;
+import android.view.ContextMenu.ContextMenuInfo;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.Toast;
 import es.skastro.android.util.alert.SimpleListAdapter;
 import es.skastro.android.util.alert.SimpleOkAlertDialog;
 import es.skastro.android.util.alert.StringPrompt;
+import es.skastro.android.util.bitmap.BitmapUtils;
 import es.skastro.android.util.bluetooth.BluetoothService;
 import es.skastro.android.util.bluetooth.DeviceListActivity;
-import es.skastro.gcodepainter.draw.CoordinateConversor;
-import es.skastro.gcodepainter.draw.DrawFile;
-import es.skastro.gcodepainter.draw.Point;
-import es.skastro.gcodepainter.draw.inkpad.Inkpad;
-import es.skastro.gcodepainter.util.BitmapUtils;
+import es.skastro.gcodepainter.R;
+import es.skastro.gcodepainter.draw.document.Document;
+import es.skastro.gcodepainter.draw.document.Point;
+import es.skastro.gcodepainter.draw.document.Trace;
+import es.skastro.gcodepainter.draw.document.TracePoint;
+import es.skastro.gcodepainter.draw.tool.inkpad.Inkpad;
+import es.skastro.gcodepainter.draw.tool.inkpad.ToolInkpad;
+import es.skastro.gcodepainter.draw.tool.line.ToolLine;
+import es.skastro.gcodepainter.draw.tool.zoom.ToolZoom;
+import es.skastro.gcodepainter.draw.util.CoordinateConversor;
 import es.skastro.gcodepainter.view.DrawView;
-import es.skastro.gcodepainter.view.DrawView.DrawMode;
 
 /***
  * Real etch-a-sketch drawable dimmensions: 15.5cm x 10.5cm (aspect ratio: 1,4762)
@@ -56,30 +63,6 @@ import es.skastro.gcodepainter.view.DrawView.DrawMode;
  */
 
 public class MainActivity extends Activity implements Observer {
-
-    final static int GET_IMAGE_FROM_GALLERY_RESPONSE = 99;
-    final static int GET_IMAGE_FROM_CAMERA_RESPONSE = 98;
-    View view;
-    DrawView drawView;
-    DrawFile drawFile;
-    Inkpad inkpad;
-    String currentDrawFilename = null;
-    Button btnUndo, btnBackground, btnConnect, btnSend, btnDrawLine, btnDrawInkpad;
-    ImageView drawBackground;
-    CheckBox chkAutomaticSend;
-
-    Point bottomLeft = new Point(0.0, 625.0);
-    Point topRight = new Point(922.0, 0.0);
-
-    Point sketch_bottomLeft = new Point(0.0, 0.0);
-    Point sketch_topRight = new Point(125.0, 85.6);
-
-    final static int CONNECT_BLUETOOTH_SECURE = 100;
-    final static int CONNECT_BLUETOOTH_INSECURE = 101;
-    BluetoothAdapter mBluetoothAdapter;
-    // Member object for the chat services
-    private BluetoothService mChatService = null;
-    CoordinateConversor conv = new CoordinateConversor(bottomLeft, topRight, sketch_bottomLeft, sketch_topRight);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -96,24 +79,33 @@ public class MainActivity extends Activity implements Observer {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
-                    sendCommitedPoints();
+                    // sendCommitedPoints();
                 }
             }
         });
 
-        btnDrawLine = (Button) findViewById(R.id.buttonDrawLine);
-        btnDrawLine.setOnClickListener(new View.OnClickListener() {
+        btnToolLine = (ImageButton) findViewById(R.id.toolLine);
+        btnToolLine.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 selectToolLine();
             }
         });
 
-        btnDrawInkpad = (Button) findViewById(R.id.buttonDrawInkpad);
-        btnDrawInkpad.setOnClickListener(new View.OnClickListener() {
+        btnToolInkpad = (ImageButton) findViewById(R.id.toolInkpad);
+        registerForContextMenu(btnToolInkpad);
+        btnToolInkpad.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                selectToolInkpad();
+                MainActivity.this.openContextMenu(v);
+            }
+        });
+
+        btnToolZoom = (ImageButton) findViewById(R.id.toolZoom);
+        btnToolZoom.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                selectToolZoom();
             }
         });
 
@@ -121,8 +113,7 @@ public class MainActivity extends Activity implements Observer {
         btnSend.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                drawFile.commitUndoPoints();
-                sendCommitedPoints();
+                sendRemainPoints();
             }
         });
         btnConnect = (Button) findViewById(R.id.buttonConnect);
@@ -138,8 +129,15 @@ public class MainActivity extends Activity implements Observer {
         btnUndo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (drawFile != null)
-                    drawFile.undoLastAdd();
+                document.undo();
+            }
+        });
+
+        btnRedo = (Button) findViewById(R.id.buttonRedo);
+        btnRedo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                document.redo();
             }
         });
 
@@ -164,39 +162,50 @@ public class MainActivity extends Activity implements Observer {
         selectToolLine();
     }
 
-    private void changeDraw(DrawFile drawFile) {
+    private void changeDocument(Document drawFile) {
         if (drawFile == null) {
             SimpleOkAlertDialog.show(MainActivity.this, "Erro",
                     "Houbo un problema cambiando a imaxe. Volva a intentalo.");
             finish();
         } else {
-            if (this.drawFile != null)
-                this.drawFile.deleteObservers();
-            lastSentIndex = -1;
-            this.drawFile = drawFile;
-            drawView.setDrawFile(drawFile);
+            if (this.document != null)
+                this.document.deleteObservers();
+            this.document = drawFile;
+            drawView.setDocument(drawFile);
             drawFile.addObserver(this);
             update(drawFile, null);
+            selectToolLine();
+            resetGcodeConversion();
         }
     }
 
     private void selectToolLine() {
-        drawView.setDrawMode(DrawMode.LINE);
-        btnDrawLine.setBackgroundColor(getResources().getColor(R.color.light_blue));
-        btnDrawInkpad.setBackgroundColor(Color.WHITE);
+        ToolLine tline = new ToolLine(getApplicationContext(), document);
+        drawView.setTool(tline);
+        btnToolLine.setBackground(getResources().getDrawable(R.drawable.pressed));
+        btnToolInkpad.setBackground(getResources().getDrawable(R.drawable.not_pressed));
+        btnToolZoom.setBackground(getResources().getDrawable(R.drawable.not_pressed));
     }
 
-    private void selectToolInkpad() {
-        openInkpad();
+    private void selectToolInkpad(Inkpad inkpad, String name) {
+        ToolInkpad tinkpad = new ToolInkpad(getApplicationContext(), document, inkpad);
+        drawView.setTool(tinkpad);
+        btnToolInkpad.setBackground(getResources().getDrawable(R.drawable.pressed));
+        btnToolLine.setBackground(getResources().getDrawable(R.drawable.not_pressed));
+        btnToolZoom.setBackground(getResources().getDrawable(R.drawable.not_pressed));
     }
 
-    private void useInkpad(Inkpad inkpad, String name) {
-        this.inkpad = inkpad;
-        drawView.setInkpad(inkpad);
-        drawView.setDrawMode(DrawMode.INKPAD);
-        btnDrawInkpad.setBackgroundColor(getResources().getColor(R.color.light_blue));
-        btnDrawLine.setBackgroundColor(Color.WHITE);
-        btnDrawInkpad.setText(name);
+    private void selectToolZoom() {
+        SimpleOkAlertDialog.show(MainActivity.this, "Non implementado",
+                "Función sen terminar de implementar. Desculpe as molestias.");
+        if (true)
+            return;
+        ToolZoom tzoom = new ToolZoom(getApplicationContext(), document);
+        drawView.setTool(tzoom);
+        btnToolZoom.setBackground(getResources().getDrawable(R.drawable.pressed));
+        btnToolLine.setBackground(getResources().getDrawable(R.drawable.not_pressed));
+        btnToolInkpad.setBackground(getResources().getDrawable(R.drawable.not_pressed));
+
     }
 
     private void setCurrentDrawFilename(String filename) {
@@ -231,10 +240,11 @@ public class MainActivity extends Activity implements Observer {
     }
 
     private void newDraw() {
-        drawFile = new DrawFile();
-        drawFile.addPoint(bottomLeft, DrawFile.LAST_POSITION);
-        drawFile.clearUndoInfo();
-        changeDraw(drawFile);
+        document = new Document();
+        int id = document.createTrace();
+        document.addPoint(id, new TracePoint(new Point(0, 0)));
+        document.commitTrace(id);
+        changeDocument(document);
         setCurrentDrawFilename(null);
     }
 
@@ -261,7 +271,7 @@ public class MainActivity extends Activity implements Observer {
             builder.setTitle("Abrir debuxo...").setAdapter(fileAdapter, new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
-                    DrawFile opened = DrawFile.fromFile(files[which]);
+                    Document opened = Document.fromFile(files[which]);
                     if (opened == null) {
                         SimpleOkAlertDialog
                                 .show(MainActivity.this, "Non se puido abrir o arquivo",
@@ -269,7 +279,7 @@ public class MainActivity extends Activity implements Observer {
                         newDraw();
                     } else {
                         setCurrentDrawFilename(files[which].getName().replace(".ske", ""));
-                        changeDraw(opened);
+                        changeDocument(opened);
                     }
                 }
             });
@@ -280,46 +290,39 @@ public class MainActivity extends Activity implements Observer {
 
     private void saveDraw() {
         try {
-            if (drawFile != null) {
+            if (document != null) {
                 final File dir = getDrawsDirectory();
-                if (currentDrawFilename == null) {
-                    StringPrompt sp = new StringPrompt(this, "Nome do arquivo",
-                            "Escriba o nome co que quere gardar o debuxo", "") {
-                        @Override
-                        public boolean onOkClicked(String value) {
-                            try {
-                                Pattern filenamePattern = Pattern.compile("^[a-z0-9]+$");
-                                if (filenamePattern.matcher(value).matches()) {
-                                    setCurrentDrawFilename(value);
-                                    File target = new File(dir.getAbsoluteFile() + File.separator + currentDrawFilename
-                                            + ".ske");
-                                    if (target.exists()) {
-                                        SimpleOkAlertDialog.show(MainActivity.this, "Arquivo existente",
-                                                "Xa existe un debuxo con ese nome, non se vai gardar.");
-                                    } else {
-                                        drawFile.saveToDisk(target);
-                                        Toast.makeText(MainActivity.this, "Debuxo gardado", Toast.LENGTH_LONG).show();
-                                    }
+                StringPrompt sp = new StringPrompt(this, "Nome do arquivo",
+                        "Escriba o nome co que quere gardar o debuxo", currentDrawFilename) {
+                    @Override
+                    public boolean onOkClicked(String value) {
+                        try {
+                            Pattern filenamePattern = Pattern.compile("^[a-z0-9]+$");
+                            if (filenamePattern.matcher(value).matches()) {
+                                setCurrentDrawFilename(value);
+                                File target = new File(dir.getAbsoluteFile() + File.separator + currentDrawFilename
+                                        + ".ske");
+                                if (target.exists()) {
+                                    SimpleOkAlertDialog.show(MainActivity.this, "Arquivo existente",
+                                            "Xa existe un debuxo con ese nome, non se vai gardar.");
                                 } else {
-                                    SimpleOkAlertDialog
-                                            .show(MainActivity.this, "Nome inválido",
-                                                    "O nome seleccionado non é válido, só se poden utilizar letras e números. Volva a intentalo.");
+                                    document.saveToDisk(target);
+                                    Toast.makeText(MainActivity.this, "Debuxo gardado", Toast.LENGTH_LONG).show();
                                 }
-                            } catch (Exception e) {
+                            } else {
                                 SimpleOkAlertDialog
-                                        .show(MainActivity.this, "Error",
-                                                "Houbo un erro mentres se gardaba o arquivo e a operación non se puido completar");
-                                Log.e("MainActivity", e.getMessage());
+                                        .show(MainActivity.this, "Nome inválido",
+                                                "O nome seleccionado non é válido, só se poden utilizar letras e números. Volva a intentalo.");
                             }
-                            return true;
+                        } catch (Exception e) {
+                            SimpleOkAlertDialog.show(MainActivity.this, "Error",
+                                    "Houbo un erro mentres se gardaba o arquivo e a operación non se puido completar");
+                            Log.e("MainActivity", e.getMessage());
                         }
-                    };
-                    sp.show();
-                } else {
-                    File target = new File(dir.getAbsoluteFile() + File.separator + currentDrawFilename + ".ske");
-                    drawFile.saveToDisk(target);
-                    Toast.makeText(MainActivity.this, "Debuxo gardado", Toast.LENGTH_LONG).show();
-                }
+                        return true;
+                    }
+                };
+                sp.show();
             }
         } catch (Exception e) {
             SimpleOkAlertDialog.show(MainActivity.this, "Error",
@@ -328,47 +331,9 @@ public class MainActivity extends Activity implements Observer {
         }
     }
 
-    private void openInkpad() {
-        File dir = getInkpadsDirectory();
-        final File[] files = dir.listFiles(new FileFilter() {
-            @Override
-            public boolean accept(File pathname) {
-                return pathname.getName().endsWith(".ipa") && !pathname.getName().startsWith(".");
-            }
-        });
-        if (files.length == 0) {
-            SimpleOkAlertDialog.show(this, "Non hai tampóns",
-                    "Non se atoparon tampóns na tarxeta de memoria:\n " + dir.getAbsolutePath());
-        } else {
-            SimpleListAdapter<File> fileAdapter = new SimpleListAdapter<File>(MainActivity.this, Arrays.asList(files),
-                    new SimpleListAdapter.StringGenerator<File>() {
-                        @Override
-                        public String getString(File addr) {
-                            return addr.getName();
-                        }
-                    });
-            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-            builder.setTitle("Abrir tampón...").setAdapter(fileAdapter, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    Inkpad opened = Inkpad.fromFile(files[which]);
-                    if (opened == null) {
-                        SimpleOkAlertDialog
-                                .show(MainActivity.this, "Non se puido abrir o arquivo",
-                                        "Houbo un problema tentando cargar o tampón. O arquivo pode estar danado ou non se recoñece o seu formato");
-                    } else {
-                        useInkpad(Inkpad.fromFile(files[which]), files[which].getName().replace(".ipa", ""));
-                    }
-                }
-            });
-            builder.create().show();
-            setCurrentDrawFilename(null);
-        }
-    }
-
     private void saveInkpad() {
         try {
-            if (drawFile != null) {
+            if (document != null) {
                 final File dir = getInkpadsDirectory();
                 StringPrompt sp = new StringPrompt(this, "Nome do tampón",
                         "Escriba o nome co que quere gardar o tampón.", "") {
@@ -383,7 +348,7 @@ public class MainActivity extends Activity implements Observer {
                                     SimpleOkAlertDialog.show(MainActivity.this, "Arquivo existente",
                                             "Xa existe un debuxo con ese nome, non se vai gardar");
                                 } else {
-                                    Inkpad.fromDrawFile(drawFile).saveToDisk(target);
+                                    Inkpad.fromDrawFile(document).saveToDisk(target);
                                     Toast.makeText(MainActivity.this, "Tampón gardado", Toast.LENGTH_LONG).show();
                                 }
                             } else {
@@ -411,7 +376,6 @@ public class MainActivity extends Activity implements Observer {
     public void selectBackgroundFromGallery() {
         Intent photoPickerIntent = new Intent(Intent.ACTION_GET_CONTENT);
         photoPickerIntent.setType("image/*");
-        // photoPickerIntent.putExtra(Intent.EXTRA_STREAM, Uri.parse("file:///sdcard/Pictures/image.jpg"));
         startActivityForResult(photoPickerIntent, GET_IMAGE_FROM_GALLERY_RESPONSE);
     }
 
@@ -421,8 +385,49 @@ public class MainActivity extends Activity implements Observer {
     }
 
     @Override
+    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
+        menu.setHeaderTitle("Abrir tampón...");
+        fillInkpadMenu(menu);
+        if (menu.size() == 0) {
+            menu.close();
+            SimpleOkAlertDialog.show(this, "Non hai tampóns", "Non se atoparon tampóns gardados.");
+        }
+    }
+
+    private File[] inkPads;
+    final int INKPAD_GROUP = 1;
+
+    private void fillInkpadMenu(ContextMenu menu) {
+        File dir = getInkpadsDirectory();
+        inkPads = dir.listFiles(new FileFilter() {
+            @Override
+            public boolean accept(File pathname) {
+                return pathname.getName().endsWith(".ipa") && !pathname.getName().startsWith(".");
+            }
+        });
+        int id = 0;
+        for (File f : inkPads) {
+            menu.add(INKPAD_GROUP, id++, Menu.NONE, f.getName());
+        }
+    }
+
+    @Override
+    public boolean onContextItemSelected(MenuItem item) {
+        if (item.getGroupId() == INKPAD_GROUP) {
+            Inkpad opened = Inkpad.fromFile(inkPads[item.getItemId()]);
+            if (opened == null) {
+                SimpleOkAlertDialog
+                        .show(MainActivity.this, "Non se puido abrir o arquivo",
+                                "Houbo un problema tentando cargar o tampón. O arquivo pode estar danado ou non se recoñece o seu formato");
+            } else {
+                selectToolInkpad(opened, item.getTitle().toString().replace(".ipa", ""));
+            }
+        }
+        return super.onContextItemSelected(item);
+    }
+
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
         return true;
     }
@@ -460,7 +465,6 @@ public class MainActivity extends Activity implements Observer {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-
         if (resultCode == Activity.RESULT_OK) {
             String address;
             switch (requestCode) {
@@ -501,21 +505,49 @@ public class MainActivity extends Activity implements Observer {
 
     @Override
     public void update(Observable observable, Object data) {
-        btnUndo.setEnabled(((DrawFile) observable).canUndo());
+        btnUndo.setEnabled(((Document) observable).canUndo());
+        btnRedo.setEnabled(((Document) observable).canRedo());
         if (chkAutomaticSend.isChecked()) {
             sendCommitedPoints();
         }
     }
 
-    int lastSentIndex = -1;
+    int lastTraceIdSent = -1;
+    Point gcode_bottomLeft = new Point(0.0, 0.0);
+    Point gcode_topRight = new Point(125.0, 85.6);
+    CoordinateConversor gcode_conversor;
+
+    private void resetGcodeConversion() {
+        gcode_conversor = new CoordinateConversor(document.bottomLeftCorner, document.topRightCorner, gcode_bottomLeft,
+                gcode_topRight);
+        lastTraceIdSent = -1;
+    }
 
     private void sendCommitedPoints() {
-        for (int i = lastSentIndex + 1; i < drawFile.getPointCount(); i++) {
-            if (!drawFile.isCommited(i))
-                return;
-            sendMessage("G1 " + conv.calculate(drawFile.getPoint(i)).toString());
-            lastSentIndex = i;
+        sendPoints(true);
+    }
+
+    private void sendRemainPoints() {
+        sendPoints(false);
+    }
+
+    private void sendPoints(boolean excludeLastTrace) {
+        int traces;
+        if (excludeLastTrace)
+            traces = document.getTraceCount() - 1;
+        else
+            traces = document.getTraceCount();
+
+        for (int i = 0; i < traces; i++) {
+            Trace tr = document.getTrace(i);
+            if (lastTraceIdSent < tr.getTraceId()) {
+                for (TracePoint p : tr.getPoints()) {
+                    sendMessage("G1 " + gcode_conversor.calculate(p.getPoint()).toString());
+                }
+                lastTraceIdSent = tr.getTraceId();
+            }
         }
+
     }
 
     // /////////////////////////
@@ -587,12 +619,17 @@ public class MainActivity extends Activity implements Observer {
     }
 
     private synchronized void sendMessage(String message) {
-        if (messageQueue == null) {
+        queueAwake();
+        if (message.length() > 0) {
+            Log.d("messageQueue", "messageQueue: " + message);
+            messagesToSend.add(message + "\n");
+        }
+    }
+
+    private void queueAwake() {
+        if (messageQueue == null || !messageQueue.isAlive()) {
             messageQueue = new MessageQueue(messagesToSend);
             messageQueue.start();
-        }
-        if (message.length() > 0) {
-            messagesToSend.add(message + "\n");
         }
     }
 
@@ -606,7 +643,9 @@ public class MainActivity extends Activity implements Observer {
             this.messagesToSend = messagesToSend;
         }
 
-        boolean WAIT_MODE = true;
+        final boolean WAIT_MODE = true;
+        final float MAX_SECONDS_TO_WAIT = 10.0f;
+        float waited;
 
         @Override
         public void run() {
@@ -620,24 +659,32 @@ public class MainActivity extends Activity implements Observer {
                         }
                         if (mChatService == null || mChatService.getState() != BluetoothService.STATE_CONNECTED) {
                             Log.w("MessageQueue ", "MessageQueue: Bluetooth not connected");
-                            sleep(1000);
+                            if (MAX_SECONDS_TO_WAIT < waited)
+                                return;
+                            Thread.sleep(1000);
+                            waited += 1.0f;
                         } else {
                             Log.w("MessageQueue", "MessageQueue: sending " + messagesToSend.get(0));
                             if (WAIT_MODE) {
                                 while (!mChatService.writeAndWait(messagesToSend.get(0).getBytes())) {
                                     Thread.sleep(500);
+                                    waited += 0.5;
                                     Log.w("MessageQueue", "MessageQueue: retrying " + messagesToSend.get(0));
                                 }
-
+                                waited = 0;
                             } else {
                                 mChatService.write(messagesToSend.get(0).getBytes());
                                 sleep(20);
+                                waited = 0;
                             }
                             Log.w("MessageQueue", "MessageQueue: removing " + messagesToSend.get(0));
                             messagesToSend.remove(0);
                         }
                     } else {
                         // Log.w("MessageQueue", "MessageQueue: No messages ");
+                        if (MAX_SECONDS_TO_WAIT < waited)
+                            return;
+                        waited += 0.2;
                         sleep(200);
                     }
                 }
@@ -660,6 +707,7 @@ public class MainActivity extends Activity implements Observer {
                     setStatus(getString(R.string.title_connected_to, mConnectedDeviceName));
                     btnConnect.setBackgroundColor(getResources().getColor(R.color.light_green));
                     btnConnect.setText("Conectado: " + mConnectedDeviceName);
+                    queueAwake();
                     break;
                 case BluetoothService.STATE_CONNECTING:
                     setStatus(R.string.title_connecting);
@@ -699,5 +747,21 @@ public class MainActivity extends Activity implements Observer {
             }
         }
     };
+    final static int GET_IMAGE_FROM_GALLERY_RESPONSE = 99;
+    final static int GET_IMAGE_FROM_CAMERA_RESPONSE = 98;
+    View view;
+    DrawView drawView;
+    Document document;
+    String currentDrawFilename = null;
+    Button btnUndo, btnRedo, btnBackground, btnConnect, btnSend;
+    ImageButton btnToolLine, btnToolInkpad, btnToolZoom;
+    ImageView drawBackground;
+    CheckBox chkAutomaticSend;
+
+    final static int CONNECT_BLUETOOTH_SECURE = 100;
+    final static int CONNECT_BLUETOOTH_INSECURE = 101;
+    BluetoothAdapter mBluetoothAdapter;
+    // Member object for the chat services
+    private BluetoothService mChatService = null;
 
 }

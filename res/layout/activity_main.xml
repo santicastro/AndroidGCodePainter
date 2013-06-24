@@ -6,8 +6,8 @@
 
     <ImageView
         android:id="@+id/drawBackground"
-        android:layout_width="wrap_content"
-        android:layout_height="fill_parent"
+        android:layout_width="694dp"
+        android:layout_height="470dp"
         android:layout_alignBottom="@+id/drawView"
         android:layout_alignLeft="@+id/drawView"
         android:layout_alignRight="@+id/drawView"
@@ -19,7 +19,7 @@
         android:id="@+id/drawView"
         android:layout_width="694dp"
         android:layout_height="470dp"
-        android:layout_alignParentRight="true"
+        android:layout_toLeftOf="@+id/toolLayout"
         android:background="@android:color/transparent"
         android:focusable="true"
         android:focusableInTouchMode="true" />
@@ -27,57 +27,45 @@
     <LinearLayout
         android:id="@+id/buttonlayout"
         style="?android:attr/buttonBarStyle"
-        android:layout_width="267dp"
+        android:layout_width="218dp"
         android:layout_height="fill_parent"
+        android:layout_above="@+id/sendLayout"
         android:layout_alignParentLeft="true"
         android:orientation="vertical" >
 
-        <!-- TOOLS -->
+        <!-- HISTORIC -->
 
         <TextView
             style="@style/buttonBarTitleStyle"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:text="FERRAMENTAS" />
+            android:text="HISTÓRICO" />
 
         <LinearLayout
-            android:layout_width="267dp"
+            android:id="@+id/historiclayout"
+            style="?android:attr/buttonBarStyle"
+            android:layout_width="218dp"
             android:layout_height="50dp"
             android:orientation="horizontal" >
 
             <Button
-                android:id="@+id/buttonDrawLine"
+                android:id="@+id/buttonUndo"
                 style="?android:attr/buttonBarButtonStyle"
-                android:layout_width="133dp"
+                android:layout_width="109dp"
                 android:layout_height="50dp"
-                android:drawableLeft="@drawable/line"
-                android:text="Lápis" />
+                android:drawableLeft="@drawable/undo"
+                android:enabled="false"
+                android:text="Atráis" />
 
             <Button
-                android:id="@+id/buttonDrawInkpad"
+                android:id="@+id/buttonRedo"
                 style="?android:attr/buttonBarButtonStyle"
-                android:layout_width="133dp"
+                android:layout_width="109dp"
                 android:layout_height="50dp"
-                android:drawableLeft="@drawable/inkpad"
-                android:text="Tampón" />
+                android:drawableRight="@drawable/redo"
+                android:enabled="false"
+                android:text="Adiante" />
         </LinearLayout>
-        <!-- EDIT -->
-
-        <TextView
-            style="@style/buttonBarTitleStyle"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:text="EDICIÓN" />
-
-        <Button
-            android:id="@+id/buttonUndo"
-            style="?android:attr/buttonBarButtonStyle"
-            android:layout_width="fill_parent"
-            android:layout_height="50dp"
-            android:drawableLeft="@drawable/undo_32x32"
-            android:enabled="false"
-            android:text="Desfacer" />
-
         <!-- BLUETOOTH -->
 
         <TextView
@@ -108,7 +96,9 @@
             android:id="@+id/chkAutomaticSend"
             android:layout_width="fill_parent"
             android:layout_height="50dp"
-            android:text="Enviar automáticamente" />
+            android:gravity="center"
+            android:paddingLeft="-30dp"
+            android:text="Envío automático" />
 
         <Button
             android:id="@+id/btnSend"
@@ -116,6 +106,16 @@
             android:layout_width="fill_parent"
             android:layout_height="50dp"
             android:text="Enviar pendentes" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/sendLayout"
+        style="?android:attr/buttonBarStyle"
+        android:layout_width="180dp"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:orientation="vertical"
+        android:padding="2dp" >
 
         <View
             style="@style/buttonBarTitleStyle"
@@ -126,7 +126,7 @@
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:text="Enviados 3/15"
-            android:visibility="gone"/>
+            android:visibility="gone" />
 
         <ProgressBar
             android:id="@+id/pbSent"
@@ -135,12 +135,48 @@
             android:layout_height="25dp"
             android:max="100"
             android:progress="25"
-            android:visibility="gone"/>
+            android:visibility="gone" />
+    </LinearLayout>
 
-        <View
-            style="@style/buttonBarTitleStyle"
-            android:layout_width="fill_parent"
-            android:layout_height="10dp" />
+    <LinearLayout
+        android:id="@+id/toolLayout"
+        style="?android:attr/buttonBarStyle"
+        android:layout_width="50dp"
+        android:layout_height="fill_parent"
+        android:layout_alignParentRight="true"
+        android:background="@android:color/white"
+        android:orientation="vertical"
+        android:padding="4dp" >
+
+        <ImageButton
+            android:id="@+id/toolLine"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/not_pressed"
+            android:contentDescription="toolLine"
+            android:src="@drawable/line"
+            android:text="" />
+
+        <ImageButton
+            android:id="@+id/toolInkpad"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/not_pressed"
+            android:contentDescription="toolInkpad"
+            android:src="@drawable/inkpad"
+            android:text="" />
+
+        <ImageButton
+            android:id="@+id/toolZoom"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/not_pressed"
+            android:contentDescription="toolZoom"
+            android:src="@drawable/zoom"
+            android:text="" />
     </LinearLayout>
 
 </RelativeLayout>

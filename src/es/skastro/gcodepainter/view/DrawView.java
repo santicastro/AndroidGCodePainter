@@ -1,6 +1,5 @@
 package es.skastro.gcodepainter.view;
 
-import java.io.File;
 import java.util.Observable;
 import java.util.Observer;
 
@@ -12,52 +11,14 @@ import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnTouchListener;
-import es.skastro.gcodepainter.draw.CoordinateConversor;
-import es.skastro.gcodepainter.draw.DrawFile;
-import es.skastro.gcodepainter.draw.Point;
-import es.skastro.gcodepainter.draw.inkpad.Inkpad;
+import es.skastro.gcodepainter.draw.document.Document;
+import es.skastro.gcodepainter.draw.document.Point;
+import es.skastro.gcodepainter.draw.tool.Tool;
+import es.skastro.gcodepainter.draw.util.CoordinateConversor;
 
 // Code based on http://marakana.com/tutorials/android/2d-graphics-example.html
 
 public class DrawView extends View implements OnTouchListener, Observer {
-
-    public enum DrawMode {
-        LINE, INKPAD
-    }
-
-    Inkpad inkpad;
-    DrawMode drawMode;
-
-    Paint paint_sent_lines = new Paint();
-    Paint paint_unsent_lines = new Paint();
-    Paint paint_points = new Paint();
-    Paint paint_highlight_points = new Paint();
-    final int point_thickness = 3;
-
-    DrawFile drawFile;
-    Paint paint_temporal_lines = new Paint();
-
-    private void DrawViewInit() {
-        setFocusable(true);
-        setFocusableInTouchMode(true);
-
-        this.setOnTouchListener(this);
-
-        paint_highlight_points.setColor(Color.BLUE);
-
-        paint_points.setColor(Color.BLACK);
-
-        paint_sent_lines.setColor(Color.BLACK);
-        paint_sent_lines.setStrokeWidth(2);
-        paint_sent_lines.setAntiAlias(true);
-
-        paint_unsent_lines.setColor(Color.BLUE);
-        paint_unsent_lines.setStrokeWidth(2);
-        paint_unsent_lines.setAntiAlias(true);
-
-        paint_temporal_lines.setColor(Color.RED);
-        paint_temporal_lines.setAntiAlias(true);
-    }
 
     public DrawView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -74,13 +35,109 @@ public class DrawView extends View implements OnTouchListener, Observer {
         DrawViewInit();
     }
 
-    public DrawFile getDrawFile() {
-        return drawFile;
+    public float getScaleFactor() {
+        return mScaleFactor;
     }
 
-    public void setDrawFile(DrawFile drawFile) {
-        this.drawFile = drawFile;
-        drawFile.addObserver(this);
+    public void setScaleFactor(float scaleFactor) {
+        if (Float.compare(mScaleFactor, scaleFactor) != 0) {
+            this.mScaleFactor = scaleFactor;
+            invalidate();
+        }
+    }
+
+    public Point getTranslate() {
+        return mTranslate;
+    }
+
+    public void setTranslate(Point mTranslate) {
+        this.mTranslate = mTranslate;
+        invalidate();
+    }
+
+    public CoordinateConversor getCoordinateDocument2View() {
+        return coordinateDocument2View;
+    }
+
+    public CoordinateConversor getCoordinateView2Document() {
+        return coordinateView2Document;
+    }
+
+    public void setDocument(Document document) {
+        coordinateDocument2View = new CoordinateConversor(document.bottomLeftCorner, document.topRightCorner,
+                view_bottomLeft, view_topRight);
+        coordinateView2Document = new CoordinateConversor(view_bottomLeft, view_topRight, document.bottomLeftCorner,
+                document.topRightCorner);
+        this.document = document;
+        document.addObserver(this);
+        invalidate();
+    }
+
+    public void setTool(Tool tool) {
+        this.tool = tool;
+    }
+
+    @Override
+    public void onDraw(Canvas canvas) {
+        canvas.save();
+        canvas.scale(1.0f, -1.0f);
+        canvas.translate(0f, -(float) view_topRight.getY());
+        // canvas.translate((float) mTranslate.getX(), (float) mTranslate.getY());
+        // canvas.scale(mScaleFactor, mScaleFactor);
+
+        // canvas.drawLine((float) borders[0].getX(), (float) borders[0].getY(), (float) borders[1].getX(),
+        // (float) borders[1].getY(), paint_border);
+        // canvas.drawLine((float) borders[0].getX(), (float) borders[0].getY(), (float) borders[3].getX(),
+        // (float) borders[3].getY(), paint_border);
+        // canvas.drawLine((float) borders[2].getX(), (float) borders[2].getY(), (float) borders[1].getX(),
+        // (float) borders[1].getY(), paint_border);
+        // canvas.drawLine((float) borders[2].getX(), (float) borders[2].getY(), (float) borders[3].getX(),
+        // (float) borders[3].getY(), paint_border);
+        // canvas.drawLine((float) borders[2].getX(), (float) borders[2].getY(), (float) borders[0].getX(),
+        // (float) borders[0].getY(), paint_border);
+
+        if (document != null) {
+            Point start;
+            Point end = null;
+            int pointCount = document.getPointCount();
+            if (pointCount > 0) {
+                end = coordinateDocument2View.calculate(document.getPoint(0).getPoint());
+                if (point_thickness > 0)
+                    canvas.drawCircle((float) end.getX(), (float) end.getY(), (int) (point_thickness * 1.5),
+                            paint_highlight_points);
+                for (int i = 1; i < pointCount; i++) {
+                    start = end;
+                    end = coordinateDocument2View.calculate(document.getPoint(i).getPoint());
+                    // if (drawFile.isCommited(i))
+                    auxDrawLine(canvas, start, end, paint_sent_lines, paint_points);
+                    // else
+                    // auxDrawLine(canvas, start, end, paint_unsent_lines, paint_points);
+                }
+            }
+
+            if (document.getTemporalPoints() != null) {
+                for (int i = 0; i < document.getTemporalPoints().size(); i++) {
+                    start = end;
+                    end = coordinateDocument2View.calculate(document.getTemporalPoints().get(i).getPoint());
+                    if (start != null) {
+                        auxDrawLine(canvas, start, end, paint_temporal_lines, null);
+                    }
+                }
+            }
+        }
+        canvas.restore();
+
+    }
+
+    @Override
+    public boolean onTouch(View view, MotionEvent event) {
+        Point translatedPoint = new Point(event.getX(), 625.0 - event.getY());
+        tool.onTouch(DrawView.this, event, translatedPoint);
+        return true;
+    }
+
+    @Override
+    public void update(Observable observable, Object data) {
         invalidate();
     }
 
@@ -92,116 +149,63 @@ public class DrawView extends View implements OnTouchListener, Observer {
 
     }
 
-    public void setBackground(File f) {
-
-    }
-
-    @Override
-    public void onDraw(Canvas canvas) {
-        if (drawFile != null) {
-            Point start;
-            Point end = null;
-            int pointCount = drawFile.getPointCount();
-            if (pointCount > 0) {
-                end = drawFile.getPoint(0);
-                if (point_thickness > 0)
-                    canvas.drawCircle((float) end.getX(), (float) end.getY(), (int) (point_thickness * 1.5),
-                            paint_highlight_points);
-                for (int i = 1; i < pointCount; i++) {
-                    start = end;
-                    end = drawFile.getPoint(i);
-                    if (drawFile.isCommited(i))
-                        auxDrawLine(canvas, start, end, paint_sent_lines, paint_points);
-                    else
-                        auxDrawLine(canvas, start, end, paint_unsent_lines, paint_points);
-                }
-            }
-
-            for (int i = 0; i < drawFile.getTemporalPointCount(); i++) {
-                start = end;
-                end = drawFile.getTemporalPoint(i);
-                if (start != null) {
-                    auxDrawLine(canvas, start, end, paint_temporal_lines, null);
-                }
-            }
-        }
-    }
-
     private void auxDrawLine(Canvas canvas, Point start, Point end, Paint paint_lines, Paint paint_points) {
         canvas.drawLine((float) start.getX(), (float) start.getY(), (float) end.getX(), (float) end.getY(), paint_lines);
         if (point_thickness > 0 && paint_points != null)
             canvas.drawCircle((float) end.getX(), (float) end.getY(), point_thickness, paint_points);
-
     }
 
-    Point a_bottomLeft = new Point(0.0, 625.0);
-    Point a_topRight = new Point(922, 0);
+    private void DrawViewInit() {
+        setFocusable(true);
+        setFocusableInTouchMode(true);
 
-    Point b_bottomLeft = new Point(0.0, 0.0);
-    Point b_topRight = new Point(155.0, 105.0);
+        this.setOnTouchListener(this);
 
-    CoordinateConversor conv = new CoordinateConversor(a_bottomLeft, a_topRight, b_bottomLeft, b_topRight);
+        paint_highlight_points.setColor(Color.BLUE);
 
-    Point firstTouchPoint = null;
+        paint_points.setColor(Color.BLACK);
 
-    public boolean onTouch(View view, MotionEvent event) {
-        if (drawFile != null) {
-            Point point = new Point(event.getX(), event.getY());
-            if (drawMode == DrawMode.LINE) {
-                switch (event.getAction()) {
-                case MotionEvent.ACTION_DOWN:
-                    drawFile.commitUndoPoints();
-                    drawFile.clearTemporalPoints();
-                    drawFile.addTemporalPoint(point);
-                    break;
-                case MotionEvent.ACTION_MOVE:
-                    drawFile.addTemporalPoint(point);
-                    break;
-                case MotionEvent.ACTION_UP:
-                    drawFile.addTemporalPoint(point);
-                    drawFile.commitTemporalPoints(false);
-                    break;
-                }
-            } else if (drawMode == DrawMode.INKPAD) {
-                double distance, scale;
-                switch (event.getAction()) {
-                case MotionEvent.ACTION_DOWN:
-                    firstTouchPoint = point;
-                    drawFile.commitUndoPoints();
-                    firstTouchPoint = new Point(event.getX(), event.getY());
-                    distance = Point.distance(firstTouchPoint, point);
-                    scale = Math.max(0.3, distance / 250);
-                    drawFile.replaceTemporalPoints(inkpad.getPoints(firstTouchPoint, scale));
-                    drawFile.addTemporalPoint(point);
-                    break;
-                case MotionEvent.ACTION_MOVE:
-                    if (firstTouchPoint != null) {
-                        distance = Point.distance(firstTouchPoint, point);
-                        scale = Math.max(0.3, distance / 250);
-                        drawFile.replaceTemporalPoints(inkpad.getPoints(firstTouchPoint, scale));
-                    }
-                    break;
-                case MotionEvent.ACTION_UP:
-                    drawFile.commitTemporalPoints(true);
-                    break;
-                }
+        paint_border.setColor(Color.RED);
+        paint_border.setStrokeWidth(BORDER_WEIGHT * 2);
+        paint_border.setAntiAlias(true);
 
-            }
+        paint_sent_lines.setColor(Color.BLACK);
+        paint_sent_lines.setStrokeWidth(2);
+        paint_sent_lines.setAntiAlias(true);
 
-        }
-        return true;
+        paint_unsent_lines.setColor(Color.BLUE);
+        paint_unsent_lines.setStrokeWidth(2);
+        paint_unsent_lines.setAntiAlias(true);
+
+        paint_temporal_lines.setColor(Color.RED);
+        paint_temporal_lines.setAntiAlias(true);
     }
 
-    @Override
-    public void update(Observable observable, Object data) {
-        invalidate();
-    }
+    private Tool tool;
+    private Document document;
 
-    public void setDrawMode(DrawMode mode) {
-        this.drawMode = mode;
-    }
+    private Paint paint_sent_lines = new Paint();
+    private Paint paint_border = new Paint();
+    private Paint paint_unsent_lines = new Paint();
+    private Paint paint_points = new Paint();
+    private Paint paint_highlight_points = new Paint();
+    final int point_thickness = 3;
 
-    public void setInkpad(Inkpad inkpad) {
-        this.inkpad = inkpad;
-    }
+    private Paint paint_temporal_lines = new Paint();
+
+    private Point view_bottomLeft = new Point(0.0, 0.0);
+    private Point view_topRight = new Point(922.0, 625.0);
+
+    final int BORDER_WEIGHT = 3;
+    Point[] borders = { new Point(view_bottomLeft.getX() - BORDER_WEIGHT, (view_bottomLeft.getY() + BORDER_WEIGHT)),
+            new Point(view_bottomLeft.getX() - BORDER_WEIGHT, (view_topRight.getY() - BORDER_WEIGHT)),
+            new Point(view_topRight.getX() + BORDER_WEIGHT, (view_topRight.getY() - BORDER_WEIGHT)),
+            new Point(view_topRight.getX() + BORDER_WEIGHT, (view_bottomLeft.getY() + BORDER_WEIGHT)) };
+
+    private float mScaleFactor = 1.f;
+    private Point mTranslate = new Point(0.f, 0.f);
+
+    private CoordinateConversor coordinateDocument2View;
+    private CoordinateConversor coordinateView2Document;
+
 }
