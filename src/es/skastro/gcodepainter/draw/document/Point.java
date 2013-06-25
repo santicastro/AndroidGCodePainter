@@ -41,6 +41,11 @@ public class Point {
         return new Point(a.getX() + b.getX(), a.getY() + b.getY());
     }
 
+    public Point(Point clone) {
+        this.x = clone.x;
+        this.y = clone.y;
+    }
+
     public Point() {
 
     }

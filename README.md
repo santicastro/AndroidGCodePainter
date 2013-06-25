@@ -1,6 +1,6 @@
 AndroidGCodePainter
 ===================
-This app allows you to draw on the touch screen and generate the corresponding GCode to print it on a CNC machine.
+This app allows you to draw on the touch screen and generate the corresponding GCode to print it on a CNC machine directly over bluetooth.
 You can see a working example here: http://www.youtube.com/watch?v=dBtlcxkml6k 
 
 It was thought to be used with this project: https://github.com/santicastro/ArduinoEtchASketch

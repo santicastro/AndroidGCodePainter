@@ -518,7 +518,7 @@ public class MainActivity extends Activity implements Observer {
     CoordinateConversor gcode_conversor;
 
     private void resetGcodeConversion() {
-        gcode_conversor = new CoordinateConversor(document.bottomLeftCorner, document.topRightCorner, gcode_bottomLeft,
+        gcode_conversor = new CoordinateConversor(document.bottomLeft, document.topRight, gcode_bottomLeft,
                 gcode_topRight);
         lastTraceIdSent = -1;
     }

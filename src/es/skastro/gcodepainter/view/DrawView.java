@@ -64,10 +64,10 @@ public class DrawView extends View implements OnTouchListener, Observer {
     }
 
     public void setDocument(Document document) {
-        coordinateDocument2View = new CoordinateConversor(document.bottomLeftCorner, document.topRightCorner,
+        coordinateDocument2View = new CoordinateConversor(document.bottomLeft, document.topRight,
                 view_bottomLeft, view_topRight);
-        coordinateView2Document = new CoordinateConversor(view_bottomLeft, view_topRight, document.bottomLeftCorner,
-                document.topRightCorner);
+        coordinateView2Document = new CoordinateConversor(view_bottomLeft, view_topRight, document.bottomLeft,
+                document.topRight);
         this.document = document;
         document.addObserver(this);
         invalidate();

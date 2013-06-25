@@ -35,9 +35,9 @@ public class Document extends Observable {
     private double deltaAngleForceNotIgnore = 0.1;
 
     @JsonIgnore
-    public final Point bottomLeftCorner = new Point(0.0, 0.0);
+    public final Point bottomLeft = new Point(0.0, 0.0);
     @JsonIgnore
-    public final Point topRightCorner = new Point(100.0, 67.8);
+    public final Point topRight = new Point(100.0, 67.8);
 
     @JsonIgnore
     private Trace currentTrace;
@@ -105,6 +105,7 @@ public class Document extends Observable {
     public void commitTrace(int id) {
         if (currentTrace != null && currentTrace.getTraceId() == id) {
             traces.add(currentTrace);
+            deleteOutboundPoints(currentTrace.getPoints());
             simplifyPoints(currentTrace.getPoints());
             currentTrace = null;
             showingTraceId = id;
@@ -159,33 +160,182 @@ public class Document extends Observable {
             return null;
     }
 
-    // TODO: control outbounds
-    public int simplifyPoints(List<TracePoint> temporal_points) {
-        int res = temporal_points.size();
-        if (temporal_points.size() > 2) {
-            Point p0, p1, p2;
-            for (int i = 2; i < temporal_points.size(); i++) {
-                p0 = temporal_points.get(i - 2).getPoint();
-                p1 = temporal_points.get(i - 1).getPoint();
-                p2 = temporal_points.get(i).getPoint();
+    private boolean isOutbounds(Point p) {
+        return Double.compare(p.getX(), bottomLeft.getX()) < 0 || Double.compare(p.getX(), topRight.getX()) > 0
+                || Double.compare(p.getY(), bottomLeft.getY()) < 0 || Double.compare(p.getY(), topRight.getY()) > 0;
+    }
+
+    private final int LEFT = 1;
+    private final int TOP = 2;
+    private final int RIGHT = 4;
+    private final int BOTTOM = 16;
+
+    private int getOnEdge(Point p) {
+        int res = 0;
+        if (!isOutbounds(p)) {
+            if (Double.compare(p.getX(), bottomLeft.getX()) == 0)
+                res |= LEFT;
+
+            if (Double.compare(p.getX(), topRight.getX()) == 0)
+                res |= RIGHT;
+
+            if (Double.compare(p.getY(), bottomLeft.getY()) == 0)
+                res |= BOTTOM;
+
+            if (Double.compare(p.getY(), topRight.getY()) == 0)
+                res |= TOP;
+        }
+        return res;
+    }
+
+    // private boolean isOnLimit(Point p) {
+    // return !isOutbounds(p)
+    // && (Double.compare(p.getX(), bottomLeft.getX()) == 0 || Double.compare(p.getX(), topRight.getX()) == 0
+    // || Double.compare(p.getY(), bottomLeft.getY()) == 0 || Double
+    // .compare(p.getY(), topRight.getY()) == 0);
+    // }
+    public void deleteOutboundPoints(List<TracePoint> list) {
+        Point p0, p1;
+        boolean out0, out1, lim0, lim1;
+        // remove outside points
+        if (list.size() > 0) {
+            p0 = list.get(0).getPoint();
+            if (isOutbounds(p0)) { // this means that the first point is outside. We don't know the previous point
+                // so we only get the nearest inside point
+                p0.setX(Math.max(bottomLeft.getX(), Math.min(topRight.getX(), p0.getX())));
+                p0.setY(Math.max(bottomLeft.getY(), Math.min(topRight.getY(), p0.getY())));
+            }
+
+            if (list.size() > 1) {
+                p0 = list.get(list.size() - 1).getPoint();
+                if (isOutbounds(p0)) {
+                    list.remove(list.size() - 1);
+                    // p0.setX(Math.max(bottomLeft.getX(), Math.min(topRight.getX(), p0.getX())));
+                    // p0.setY(Math.max(bottomLeft.getY(), Math.min(topRight.getY(), p0.getY())));
+                }
+            }
+
+            for (int i = 1; i < list.size(); i++) {
+                p0 = list.get(i - 1).getPoint();
+                out0 = isOutbounds(p0);
+                lim0 = getOnEdge(p0) != 0;
+                p1 = list.get(i).getPoint();
+                out1 = isOutbounds(p1);
+                lim1 = getOnEdge(p1) != 0;
+                if (!lim0 && !lim1 && (out0 != out1)) {
+                    Point in, out;
+                    if (out0) {
+                        out = p0;
+                        in = p1;
+                    } else {
+                        out = p1;
+                        in = p0;
+                    }
+                    Point v = Point.minus(out, in);
+                    double m = v.getY() / v.getX();
+                    Point intersec = new Point(out);
+                    boolean top = (in.getY() - topRight.getY()) * (intersec.getY() - topRight.getY()) < 0;
+                    if (top) {
+                        // x1 = (y1 - y0)/m + x0, with y1 = topRight.y
+                        intersec = new Point((topRight.getY() - in.getY()) / m + in.getX(), topRight.getY());
+                    }
+                    boolean bottom = (in.getY() - bottomLeft.getY()) * (intersec.getY() - bottomLeft.getY()) < 0;
+                    if (bottom) {
+                        // x1 = (y1 - y0)/m + x0, with y1 = bottomLeft.y
+                        intersec = new Point((bottomLeft.getY() - in.getY()) / m + in.getX(), bottomLeft.getY());
+                    }
+
+                    boolean right = (in.getX() - topRight.getX()) * (intersec.getX() - topRight.getX()) < 0;
+                    if (right) {
+                        // y1 = (x1 - x0)*m + y0, with x1 = topRight.x
+                        intersec = new Point(topRight.getX(), (topRight.getX() - in.getX()) * m + in.getY());
+                    }
+
+                    boolean left = (in.getX() - bottomLeft.getX()) * (intersec.getX() - bottomLeft.getX()) < 0;
+                    if (left) {
+                        // y1 = (x1 - x0)*m + y0, with x1 = bottomLeft.x
+                        intersec = new Point(bottomLeft.getX(), (bottomLeft.getX() - in.getX()) * m + in.getY());
+                    }
+                    list.add(i, new TracePoint(intersec));
+                    i++;
+                }
+            }
+
+            // we can delete now the points out of the bounds
+            for (int i = list.size() - 1; i >= 0; i--) {
+                if (isOutbounds(list.get(i).getPoint())) {
+                    if (i > 0 && i < list.size() - 1) {
+                        // control if the trace went outside on a different edge than the inside trace
+                        Point previous = list.get(i - 1).getPoint();
+                        Point next = list.get(i + 1).getPoint();
+                        int limit0 = getOnEdge(previous);
+                        int limit1 = getOnEdge(next);
+                        if (limit0 != limit1 && limit0 != 0 && limit1 != 0) {
+                            Point newPoint0 = null, newPoint1 = null;
+                            switch (limit0 * limit1) {
+                            case LEFT * TOP:
+                                newPoint0 = new Point(bottomLeft.getX(), topRight.getY());
+                                break;
+                            case RIGHT * TOP:
+                                newPoint0 = new Point(topRight);
+                                break;
+                            case RIGHT * BOTTOM:
+                                newPoint0 = new Point(topRight.getX(), bottomLeft.getY());
+                                break;
+                            case LEFT * BOTTOM:
+                                newPoint0 = new Point(bottomLeft);
+                                break;
+                            case LEFT * RIGHT:
+                                newPoint0 = new Point(previous.getX(), topRight.getY());
+                                newPoint1 = new Point(next.getX(), topRight.getY());
+                                break;
+                            case TOP * BOTTOM:
+                                newPoint0 = new Point(topRight.getX(), previous.getY());
+                                newPoint1 = new Point(topRight.getX(), next.getY());
+                                break;
+                            }
+                            if (newPoint1 != null) {
+                                list.add(i + 1, new TracePoint(newPoint1));
+                            }
+                            if (newPoint0 != null) {
+                                list.add(i + 1, new TracePoint(newPoint0));
+                            }
+                        }
+                    }
+                    list.remove(i);
+                }
+            }
+        }
+    }
+
+    public int simplifyPoints(List<TracePoint> list) {
+        Point p0, p1, p2;
+
+        int res = list.size();
+        // simplifyPoints
+        if (list.size() > 2) {
+            for (int i = 2; i < list.size(); i++) {
+                p0 = list.get(i - 2).getPoint();
+                p1 = list.get(i - 1).getPoint();
+                p2 = list.get(i).getPoint();
                 double deltaAngle = Math.abs(Point.angle(Point.minus(p1, p0), Point.minus(p2, p1)));
                 // double distance1 = Point.distance(p0, p1);
                 // double distance2 = Point.distance(p1, p2);
                 // double scaleDistance = distance1 / (distance2 + 0.0001);
                 // if (deltaAngle < deltaAngleIgnore && (scaleDistance > 0.33 && scaleDistance < 3)) {
                 if (deltaAngle < deltaAngleIgnore) {
-                    temporal_points.remove(i - 1);
+                    list.remove(i - 1);
                     i--;
                 } else if (deltaAngle < deltaAngleForceNotIgnore) {
                     if (Point.distance(p0, p2) < minPointDistance) {
-                        temporal_points.remove(i - 1);
+                        list.remove(i - 1);
                         i--;
                     }
                 }
 
             }
         }
-        return temporal_points.size() - res;
+        return list.size() - res;
     }
 
     public void addPoint(int traceId, TracePoint p) {
