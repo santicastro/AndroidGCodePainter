@@ -3,6 +3,7 @@ package es.skastro.gcodepainter.activity;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -36,6 +37,8 @@ import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.SeekBar;
+import android.widget.TextView;
 import android.widget.Toast;
 import es.skastro.android.util.alert.SimpleListAdapter;
 import es.skastro.android.util.alert.SimpleOkAlertDialog;
@@ -43,6 +46,7 @@ import es.skastro.android.util.alert.StringPrompt;
 import es.skastro.android.util.bitmap.BitmapUtils;
 import es.skastro.android.util.bluetooth.BluetoothService;
 import es.skastro.android.util.bluetooth.DeviceListActivity;
+import es.skastro.android.util.component.VerticalSeekBar;
 import es.skastro.gcodepainter.R;
 import es.skastro.gcodepainter.draw.document.Document;
 import es.skastro.gcodepainter.draw.document.Point;
@@ -145,6 +149,28 @@ public class MainActivity extends Activity implements Observer {
 
         drawView = (DrawView) findViewById(R.id.drawView);
 
+        toolZoom = new ToolZoom(getApplicationContext(), null, drawView);
+        toolZoom.addObserver(this);
+
+        zoomBar = (VerticalSeekBar) findViewById(R.id.zoomBar);
+        zoomBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (seekBar.isSelected())
+                    toolZoom.changeScale(1 + (toolZoom.getMaxScale() - 1) * ((float) progress / seekBar.getMax()));
+            }
+        });
+
+        zoomText = (TextView) findViewById(R.id.zoomText);
+
         newDraw();
         drawView.requestFocus();
         if ((mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter()) == null) {
@@ -160,20 +186,24 @@ public class MainActivity extends Activity implements Observer {
         }
 
         selectToolLine();
+        updateZoomInfo();
+
     }
 
-    private void changeDocument(Document drawFile) {
-        if (drawFile == null) {
+    private void changeDocument(Document document) {
+        if (document == null) {
             SimpleOkAlertDialog.show(MainActivity.this, "Erro",
                     "Houbo un problema cambiando a imaxe. Volva a intentalo.");
             finish();
         } else {
             if (this.document != null)
                 this.document.deleteObservers();
-            this.document = drawFile;
-            drawView.setDocument(drawFile);
-            drawFile.addObserver(this);
-            update(drawFile, null);
+            this.document = document;
+            // if(toolZoom!= null)
+            toolZoom.setDocument(document);
+            drawView.setDocument(document);
+            document.addObserver(this);
+            update(document, null);
             selectToolLine();
             resetGcodeConversion();
         }
@@ -196,16 +226,10 @@ public class MainActivity extends Activity implements Observer {
     }
 
     private void selectToolZoom() {
-        SimpleOkAlertDialog.show(MainActivity.this, "Non implementado",
-                "Función sen terminar de implementar. Desculpe as molestias.");
-        if (true)
-            return;
-        ToolZoom tzoom = new ToolZoom(getApplicationContext(), document);
-        drawView.setTool(tzoom);
+        drawView.setTool(toolZoom);
         btnToolZoom.setBackground(getResources().getDrawable(R.drawable.pressed));
         btnToolLine.setBackground(getResources().getDrawable(R.drawable.not_pressed));
         btnToolInkpad.setBackground(getResources().getDrawable(R.drawable.not_pressed));
-
     }
 
     private void setCurrentDrawFilename(String filename) {
@@ -505,10 +529,22 @@ public class MainActivity extends Activity implements Observer {
 
     @Override
     public void update(Observable observable, Object data) {
-        btnUndo.setEnabled(((Document) observable).canUndo());
-        btnRedo.setEnabled(((Document) observable).canRedo());
-        if (chkAutomaticSend.isChecked()) {
-            sendCommitedPoints();
+        if (observable instanceof ToolZoom) {
+            updateZoomInfo();
+        } else {
+            btnUndo.setEnabled(((Document) observable).canUndo());
+            btnRedo.setEnabled(((Document) observable).canRedo());
+            if (chkAutomaticSend.isChecked()) {
+                sendCommitedPoints();
+            }
+        }
+    }
+
+    private void updateZoomInfo() {
+        zoomText.setText(df.format(drawView.getScaleFactor()) + "x");
+        if (!zoomBar.isSelected()) {
+            zoomBar.setProgress((int) (((drawView.getScaleFactor() - 1f) / (toolZoom.getMaxScale() - 1f)) * zoomBar
+                    .getMax()));
         }
     }
 
@@ -749,19 +785,22 @@ public class MainActivity extends Activity implements Observer {
     };
     final static int GET_IMAGE_FROM_GALLERY_RESPONSE = 99;
     final static int GET_IMAGE_FROM_CAMERA_RESPONSE = 98;
-    View view;
-    DrawView drawView;
-    Document document;
-    String currentDrawFilename = null;
-    Button btnUndo, btnRedo, btnBackground, btnConnect, btnSend;
-    ImageButton btnToolLine, btnToolInkpad, btnToolZoom;
-    ImageView drawBackground;
-    CheckBox chkAutomaticSend;
+    private DrawView drawView;
+    private Document document;
+    private String currentDrawFilename = null;
+    private Button btnUndo, btnRedo, btnConnect, btnSend;
+    private ImageButton btnToolLine, btnToolInkpad, btnToolZoom;
+    private ImageView drawBackground;
+    private CheckBox chkAutomaticSend;
+    private VerticalSeekBar zoomBar;
+    private ToolZoom toolZoom;
+    private TextView zoomText;
+
+    private final DecimalFormat df = new DecimalFormat("0.0");
 
     final static int CONNECT_BLUETOOTH_SECURE = 100;
     final static int CONNECT_BLUETOOTH_INSECURE = 101;
     BluetoothAdapter mBluetoothAdapter;
-    // Member object for the chat services
     private BluetoothService mChatService = null;
 
 }

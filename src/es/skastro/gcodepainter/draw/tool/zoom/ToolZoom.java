@@ -1,6 +1,7 @@
 package es.skastro.gcodepainter.draw.tool.zoom;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import es.skastro.gcodepainter.draw.document.Document;
@@ -10,19 +11,37 @@ import es.skastro.gcodepainter.view.DrawView;
 
 public class ToolZoom extends Tool {
 
-    public ToolZoom(Context context, Document document) {
+    public ToolZoom(Context context, Document document, DrawView drawView) {
         super(context, document);
+        this.drawView = drawView;
         mScaleDetector = new ScaleGestureDetector(context, new ScaleListener());
+        maxScale = 5f;
+    }
+
+    public float getMaxScale() {
+        return maxScale;
+    }
+
+    public void setMaxScale(float maxScale) {
+        this.maxScale = maxScale;
+    }
+
+    public void changeScale(float scale) {
+        if (drawView != null) {
+            Log.d("changeScale", "changeScale: " + scale);
+            drawView.setScaleFactor(Math.max(1f, Math.min(scale, maxScale)));
+            setChanged();
+            notifyObservers();
+        }
     }
 
     @Override
     public void onTouch(DrawView drawView, MotionEvent event, Point translatedPoint) {
-        this.drawView = drawView;
         if (event.getPointerCount() > 1) {
             firstTouchPoint = null;
             mScaleDetector.onTouchEvent(event);
         } else {
-            Point point = new Point(event.getX(), event.getY());
+            Point point = new Point(event.getX(), -event.getY());
             switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 firstTouchPoint = point;
@@ -46,9 +65,7 @@ public class ToolZoom extends Tool {
         @Override
         public boolean onScale(ScaleGestureDetector detector) {
             float scaleFactor = drawView.getScaleFactor() * detector.getScaleFactor();
-            scaleFactor = Math.max(1.f, Math.min(scaleFactor, 5.0f));
-            drawView.setScaleFactor(scaleFactor);
-            // Don't let the object get too small or too large.
+            changeScale(scaleFactor);
             return true;
         }
     }
@@ -58,4 +75,6 @@ public class ToolZoom extends Tool {
     private DrawView drawView;
     private Point firstTouchPoint;
     private Point oldTranslation;
+    private float maxScale;
+
 }

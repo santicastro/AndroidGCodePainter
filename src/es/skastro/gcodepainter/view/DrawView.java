@@ -16,8 +16,6 @@ import es.skastro.gcodepainter.draw.document.Point;
 import es.skastro.gcodepainter.draw.tool.Tool;
 import es.skastro.gcodepainter.draw.util.CoordinateConversor;
 
-// Code based on http://marakana.com/tutorials/android/2d-graphics-example.html
-
 public class DrawView extends View implements OnTouchListener, Observer {
 
     public DrawView(Context context, AttributeSet attrs) {
@@ -35,24 +33,68 @@ public class DrawView extends View implements OnTouchListener, Observer {
         DrawViewInit();
     }
 
-    public float getScaleFactor() {
-        return mScaleFactor;
+    public void resetZoom() {
+        mZoomFactor = 1.f;
+        mZoomTranslate = new Point(0.f, 0.f);
     }
 
-    public void setScaleFactor(float scaleFactor) {
-        if (Float.compare(mScaleFactor, scaleFactor) != 0) {
-            this.mScaleFactor = scaleFactor;
+    public float getScaleFactor() {
+        return mZoomFactor;
+    }
+
+    public void setScaleFactor(float newFactor) {
+        newFactor = Math.max(1.f, Math.min(newFactor, 5.0f));
+
+        if (Float.compare(mZoomFactor, newFactor) != 0) {
+            double relation = newFactor - mZoomFactor;
+            double deltaX = 0f, deltaY = 0f;
+
+            // TODO: correct this, it's not exact
+            deltaX = view_topRight.getX() / mZoomFactor * relation / 2;
+            deltaY = view_topRight.getY() / mZoomFactor * relation / 2;
+            Point newZoomTranslate = new Point(mZoomTranslate.getX() - deltaX, mZoomTranslate.getY() - deltaY);
+
+            this.mZoomFactor = newFactor;
+
+            checkTranslate(newZoomTranslate);
+            this.mZoomTranslate = newZoomTranslate;
             invalidate();
         }
     }
 
     public Point getTranslate() {
-        return mTranslate;
+        return mZoomTranslate;
     }
 
     public void setTranslate(Point mTranslate) {
-        this.mTranslate = mTranslate;
-        invalidate();
+        checkTranslate(mTranslate);
+        if (!mZoomTranslate.equals(mTranslate)) {
+            this.mZoomTranslate = mTranslate;
+            invalidate();
+        }
+    }
+
+    private boolean checkTranslate(Point mTranslate) {
+        boolean res = false;
+        // assure translation is on limits
+        if (mTranslate.getX() > 0.0) {
+            mTranslate.setX(0.0f);
+            res = true;
+        }
+        if (mTranslate.getY() > 0.0) {
+            mTranslate.setY(0.0f);
+            res = true;
+        }
+
+        if ((view_topRight.getX() - mTranslate.getX()) / mZoomFactor > view_topRight.getX()) {
+            mTranslate.setX(view_topRight.getX() - view_topRight.getX() * mZoomFactor);
+            res = true;
+        }
+        if ((view_topRight.getY() - mTranslate.getY()) / mZoomFactor > view_topRight.getY()) {
+            mTranslate.setY(view_topRight.getY() - view_topRight.getY() * mZoomFactor);
+            res = true;
+        }
+        return res;
     }
 
     public CoordinateConversor getCoordinateDocument2View() {
@@ -64,8 +106,9 @@ public class DrawView extends View implements OnTouchListener, Observer {
     }
 
     public void setDocument(Document document) {
-        coordinateDocument2View = new CoordinateConversor(document.bottomLeft, document.topRight,
-                view_bottomLeft, view_topRight);
+        resetZoom();
+        coordinateDocument2View = new CoordinateConversor(document.bottomLeft, document.topRight, view_bottomLeft,
+                view_topRight);
         coordinateView2Document = new CoordinateConversor(view_bottomLeft, view_topRight, document.bottomLeft,
                 document.topRight);
         this.document = document;
@@ -77,22 +120,35 @@ public class DrawView extends View implements OnTouchListener, Observer {
         this.tool = tool;
     }
 
+    // @Override
+    // protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+    // if (view_topRight == null)
+    //
+    // super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+    // }
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        view_topRight = new Point(getWidth(), getHeight());
+        super.onSizeChanged(w, h, oldw, oldh);
+    }
+
     @Override
     public void onDraw(Canvas canvas) {
+
         canvas.save();
         canvas.scale(1.0f, -1.0f);
         canvas.translate(0f, -(float) view_topRight.getY());
-        // canvas.translate((float) mTranslate.getX(), (float) mTranslate.getY());
-        // canvas.scale(mScaleFactor, mScaleFactor);
+        canvas.translate((float) mZoomTranslate.getX(), (float) mZoomTranslate.getY());
+        canvas.scale(mZoomFactor, mZoomFactor);
 
-        // canvas.drawLine((float) borders[0].getX(), (float) borders[0].getY(), (float) borders[1].getX(),
-        // (float) borders[1].getY(), paint_border);
-        // canvas.drawLine((float) borders[0].getX(), (float) borders[0].getY(), (float) borders[3].getX(),
-        // (float) borders[3].getY(), paint_border);
-        // canvas.drawLine((float) borders[2].getX(), (float) borders[2].getY(), (float) borders[1].getX(),
-        // (float) borders[1].getY(), paint_border);
-        // canvas.drawLine((float) borders[2].getX(), (float) borders[2].getY(), (float) borders[3].getX(),
-        // (float) borders[3].getY(), paint_border);
+        canvas.drawLine((float) borders[0].getX(), (float) borders[0].getY(), (float) borders[1].getX(),
+                (float) borders[1].getY(), paint_border);
+        canvas.drawLine((float) borders[0].getX(), (float) borders[0].getY(), (float) borders[3].getX(),
+                (float) borders[3].getY(), paint_border);
+        canvas.drawLine((float) borders[2].getX(), (float) borders[2].getY(), (float) borders[1].getX(),
+                (float) borders[1].getY(), paint_border);
+        canvas.drawLine((float) borders[2].getX(), (float) borders[2].getY(), (float) borders[3].getX(),
+                (float) borders[3].getY(), paint_border);
         // canvas.drawLine((float) borders[2].getX(), (float) borders[2].getY(), (float) borders[0].getX(),
         // (float) borders[0].getY(), paint_border);
 
@@ -131,7 +187,9 @@ public class DrawView extends View implements OnTouchListener, Observer {
 
     @Override
     public boolean onTouch(View view, MotionEvent event) {
-        Point translatedPoint = new Point(event.getX(), 625.0 - event.getY());
+        Point translatedPoint = new Point((event.getX() - mZoomTranslate.getX()) / mZoomFactor, (view_topRight.getY()
+                - event.getY() - mZoomTranslate.getY())
+                / mZoomFactor);
         tool.onTouch(DrawView.this, event, translatedPoint);
         return true;
     }
@@ -141,13 +199,13 @@ public class DrawView extends View implements OnTouchListener, Observer {
         invalidate();
     }
 
-    @Override
-    protected void onAttachedToWindow() {
-        // RelativeLayout.LayoutParams actual = (RelativeLayout.LayoutParams) this.getLayoutParams();
-        // this.setLayoutParams(new RelativeLayout.LayoutParams((int) ((double) actual.height * 0.4762), actual.width));
-        // this.setLayoutParams(new RelativeLayout.LayoutParams(500, 500));
-
-    }
+    // @Override
+    // protected void onAttachedToWindow() {
+    // super.onAttachedToWindow();
+    // // RelativeLayout.LayoutParams actual = (RelativeLayout.LayoutParams) this.getLayoutParams();
+    // // this.setLayoutParams(new RelativeLayout.LayoutParams((int) ((double) actual.height * 0.4762), actual.width));
+    // // this.setLayoutParams(new RelativeLayout.LayoutParams(500, 500));
+    // }
 
     private void auxDrawLine(Canvas canvas, Point start, Point end, Paint paint_lines, Paint paint_points) {
         canvas.drawLine((float) start.getX(), (float) start.getY(), (float) end.getX(), (float) end.getY(), paint_lines);
@@ -156,6 +214,8 @@ public class DrawView extends View implements OnTouchListener, Observer {
     }
 
     private void DrawViewInit() {
+
+        resetZoom();
         setFocusable(true);
         setFocusableInTouchMode(true);
 
@@ -163,7 +223,7 @@ public class DrawView extends View implements OnTouchListener, Observer {
 
         paint_highlight_points.setColor(Color.BLUE);
 
-        paint_points.setColor(Color.BLACK);
+        paint_points.setColor(Color.BLUE);
 
         paint_border.setColor(Color.RED);
         paint_border.setStrokeWidth(BORDER_WEIGHT * 2);
@@ -197,13 +257,13 @@ public class DrawView extends View implements OnTouchListener, Observer {
     private Point view_topRight = new Point(922.0, 625.0);
 
     final int BORDER_WEIGHT = 3;
-    Point[] borders = { new Point(view_bottomLeft.getX() - BORDER_WEIGHT, (view_bottomLeft.getY() + BORDER_WEIGHT)),
-            new Point(view_bottomLeft.getX() - BORDER_WEIGHT, (view_topRight.getY() - BORDER_WEIGHT)),
-            new Point(view_topRight.getX() + BORDER_WEIGHT, (view_topRight.getY() - BORDER_WEIGHT)),
-            new Point(view_topRight.getX() + BORDER_WEIGHT, (view_bottomLeft.getY() + BORDER_WEIGHT)) };
+    Point[] borders = { new Point(view_bottomLeft.getX() - BORDER_WEIGHT, (view_bottomLeft.getY() - BORDER_WEIGHT)),
+            new Point(view_bottomLeft.getX() - BORDER_WEIGHT, (view_topRight.getY() + BORDER_WEIGHT)),
+            new Point(view_topRight.getX() + BORDER_WEIGHT, (view_topRight.getY() + BORDER_WEIGHT)),
+            new Point(view_topRight.getX() + BORDER_WEIGHT, (view_bottomLeft.getY() - BORDER_WEIGHT)) };
 
-    private float mScaleFactor = 1.f;
-    private Point mTranslate = new Point(0.f, 0.f);
+    private float mZoomFactor;
+    private Point mZoomTranslate;
 
     private CoordinateConversor coordinateDocument2View;
     private CoordinateConversor coordinateView2Document;

@@ -138,7 +138,7 @@
             android:visibility="gone" />
     </LinearLayout>
 
-    <LinearLayout
+    <RelativeLayout
         android:id="@+id/toolLayout"
         style="?android:attr/buttonBarStyle"
         android:layout_width="50dp"
@@ -163,20 +163,41 @@
             style="?android:attr/buttonBarButtonStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_below="@+id/toolLine"
             android:background="@drawable/not_pressed"
             android:contentDescription="toolInkpad"
             android:src="@drawable/inkpad"
             android:text="" />
+
+        <es.skastro.android.util.component.VerticalSeekBar
+            android:id="@+id/zoomBar"
+            android:layout_width="wrap_content"
+            android:layout_marginLeft="5dp"
+            android:layout_height="150dp"
+            android:layout_above="@+id/zoomText"
+            android:gravity="center_horizontal"
+            android:max="100" />
+
+        <TextView
+            android:id="@+id/zoomText"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_above="@+id/toolZoom"
+            android:gravity="center_horizontal"
+            android:text="4.1x"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:textStyle="bold" />
 
         <ImageButton
             android:id="@+id/toolZoom"
             style="?android:attr/buttonBarButtonStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
             android:background="@drawable/not_pressed"
             android:contentDescription="toolZoom"
             android:src="@drawable/zoom"
             android:text="" />
-    </LinearLayout>
+    </RelativeLayout>
 
 </RelativeLayout>
