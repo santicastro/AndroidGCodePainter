@@ -1,25 +1,24 @@
 package es.skastro.gcodepainter.draw.util;
 
-import es.skastro.gcodepainter.draw.document.Point;
+import android.graphics.PointF;
+import android.graphics.RectF;
 
 public class CoordinateConversor {
-    double a_height, a_width, b_height, b_width, ab_heigh_relation, ab_width_relation;
-    Point bottom_left_a, top_right_a, bottom_left_b, top_right_b;
+    float origin_height, origin_width, target_height, target_width, heigh_relation, width_relation;
+    RectF originRect, targetRect;
 
-    public CoordinateConversor(Point bottom_left_a, Point top_right_a, Point bottom_left_b, Point top_right_b) {
-        this.bottom_left_a = bottom_left_a;
-        this.top_right_a = top_right_a;
-        this.bottom_left_b = bottom_left_b;
-        this.top_right_b = top_right_b;
+    public CoordinateConversor(RectF origin, RectF target) {
+        this.originRect = origin;
+        this.targetRect = target;
+        origin_height = origin.top - origin.bottom;
+        origin_width = origin.right - origin.left;
 
-        a_height = top_right_a.getY() - bottom_left_a.getY();
-        a_width = top_right_a.getX() - bottom_left_a.getX();
+        target_height = target.top - target.bottom;
+        target_width = target.right - target.left;
 
-        b_height = top_right_b.getY() - bottom_left_b.getY();
-        b_width = top_right_b.getX() - bottom_left_b.getX();
+        heigh_relation = target_height / origin_height;
+        width_relation = target_width / origin_width;
 
-        ab_heigh_relation = b_height / a_height;
-        ab_width_relation = b_width / a_width;
     }
 
     /***
@@ -31,10 +30,10 @@ public class CoordinateConversor {
      * @param top_right_b
      * @return
      */
-    public Point calculate(Point x) {
-        Point res = new Point();
-        res.setX(bottom_left_b.getX() + (x.getX() - bottom_left_a.getX()) * ab_width_relation);
-        res.setY(bottom_left_b.getY() + (x.getY() - bottom_left_a.getY()) * ab_heigh_relation);
+    public PointF calculate(PointF point) {
+        PointF res = new PointF();
+        res.x = targetRect.left + (point.x - originRect.left) * width_relation;
+        res.y = targetRect.bottom + (point.y - originRect.bottom) * heigh_relation;
         return res;
     }
 }

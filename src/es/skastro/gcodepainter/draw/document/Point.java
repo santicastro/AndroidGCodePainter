@@ -1,23 +1,19 @@
 package es.skastro.gcodepainter.draw.document;
 
-import java.text.DecimalFormat;
+import android.graphics.PointF;
 
-import org.apache.commons.lang.builder.EqualsBuilder;
-import org.apache.commons.lang.builder.HashCodeBuilder;
-import org.codehaus.jackson.annotate.JsonIgnore;
+public abstract class Point {
 
-public class Point {
-    private double x = 0.0, y = 0.0;
+    // @JsonIgnore
+    // private DecimalFormat df = new DecimalFormat("0.0000");
 
-    @JsonIgnore
-    private DecimalFormat df = new DecimalFormat("0.0000");
-
-    public static double distance(Point a, Point b) {
-        return Math.sqrt(Math.pow((b.x - a.x), 2.0) + Math.pow((b.y - a.y), 2.0));
+    public static float distance(PointF a, PointF b) {
+        return minus(b, a).length();
+        // return Math.sqrt(Math.pow((b.x - a.x), 2.0) + Math.pow((b.y - a.y), 2.0));
     }
 
-    public static double angle(Point a, Point b) {
-        return Math.atan2(b.getY(), b.getX()) - Math.atan2(a.getY(), a.getX());
+    public static double angle(PointF a, PointF b) {
+        return Math.atan2(b.y, b.x) - Math.atan2(a.y, a.x);
     }
 
     /***
@@ -27,68 +23,18 @@ public class Point {
      * @param n
      * @return
      */
-    public static Point rotate(Point v, double n) {
-        double rx = (v.x * Math.cos(n)) - (v.y * Math.sin(n));
-        double ry = (v.x * Math.sin(n)) + (v.y * Math.cos(n));
-        return new Point(rx, ry);
+    public static PointF rotate(PointF v, double n) {
+        float rx = (float) ((v.x * Math.cos(n)) - (v.y * Math.sin(n)));
+        float ry = (float) ((v.x * Math.sin(n)) + (v.y * Math.cos(n)));
+        return new PointF(rx, ry);
     }
 
-    public static Point minus(Point a, Point b) {
-        return new Point(a.getX() - b.getX(), a.getY() - b.getY());
+    public static PointF minus(PointF a, PointF b) {
+        return new PointF(a.x - b.x, a.y - b.y);
     }
 
-    public static Point plus(Point a, Point b) {
-        return new Point(a.getX() + b.getX(), a.getY() + b.getY());
-    }
-
-    public Point(Point clone) {
-        this.x = clone.x;
-        this.y = clone.y;
-    }
-
-    public Point() {
-
-    }
-
-    public Point(double x, double y) {
-        this.x = x;
-        this.y = y;
-    }
-
-    public double getX() {
-        return x;
-    }
-
-    public void setX(double x) {
-        this.x = x;
-    }
-
-    public double getY() {
-        return y;
-    }
-
-    public void setY(double y) {
-        this.y = y;
-    }
-
-    @Override
-    public String toString() {
-        return "X" + df.format(x) + " Y" + df.format(y);
-    }
-
-    @Override
-    public boolean equals(final Object other) {
-        if (this == other)
-            return true;
-        if (!(other instanceof Point))
-            return false;
-        Point castOther = (Point) other;
-        return new EqualsBuilder().append(x, castOther.x).append(y, castOther.y).isEquals();
-    }
-
-    @Override
-    public int hashCode() {
-        return new HashCodeBuilder(1114199465, 738887065).append(x).append(y).toHashCode();
+    public static PointF plus(PointF a, PointF b) {
+        return new PointF(a.x + b.x, a.y + b.y);
     }
 
 }

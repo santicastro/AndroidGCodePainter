@@ -1,6 +1,7 @@
 package es.skastro.gcodepainter.draw.tool.zoom;
 
 import android.content.Context;
+import android.graphics.PointF;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
@@ -36,12 +37,12 @@ public class ToolZoom extends Tool {
     }
 
     @Override
-    public void onTouch(DrawView drawView, MotionEvent event, Point translatedPoint) {
+    public void onTouch(DrawView drawView, MotionEvent event, PointF translatedPoint) {
         if (event.getPointerCount() > 1) {
             firstTouchPoint = null;
             mScaleDetector.onTouchEvent(event);
         } else {
-            Point point = new Point(event.getX(), -event.getY());
+            PointF point = new PointF(event.getX(), -event.getY());
             switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 firstTouchPoint = point;
@@ -49,7 +50,7 @@ public class ToolZoom extends Tool {
                 break;
             case MotionEvent.ACTION_MOVE:
                 if (firstTouchPoint != null) {
-                    Point move = Point.plus(oldTranslation, Point.minus(point, firstTouchPoint));
+                    PointF move = Point.plus(oldTranslation, Point.minus(point, firstTouchPoint));
                     drawView.setTranslate(move);
                 }
                 break;
@@ -73,8 +74,8 @@ public class ToolZoom extends Tool {
     private ScaleGestureDetector mScaleDetector;
 
     private DrawView drawView;
-    private Point firstTouchPoint;
-    private Point oldTranslation;
+    private PointF firstTouchPoint;
+    private PointF oldTranslation;
     private float maxScale;
 
 }

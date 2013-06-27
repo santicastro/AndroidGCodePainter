@@ -1,7 +1,7 @@
 package es.skastro.gcodepainter.draw.tool.inkpad;
 
 import android.content.Context;
-import android.util.Log;
+import android.graphics.PointF;
 import android.view.MotionEvent;
 import es.skastro.gcodepainter.draw.document.Document;
 import es.skastro.gcodepainter.draw.document.Point;
@@ -16,7 +16,7 @@ public class ToolInkpad extends Tool {
     }
 
     @Override
-    public void onTouch(DrawView drawView, MotionEvent event, Point translatedPoint) {
+    public void onTouch(DrawView drawView, MotionEvent event, PointF translatedPoint) {
         double distance, scale, angle;
         switch (event.getAction()) {
         case MotionEvent.ACTION_DOWN:
@@ -36,7 +36,6 @@ public class ToolInkpad extends Tool {
                 if (angle > -0.1 && angle < 0.1)
                     angle = 0;
             }
-            Log.w("angle", "angle: " + angle);
             document.addPoints(traceId,
                     inkpad.getPoints(drawView.getCoordinateView2Document().calculate(firstTouchPoint), scale, angle));
             break;
@@ -47,8 +46,8 @@ public class ToolInkpad extends Tool {
 
     }
 
-    private Point firstTouchPoint, vector;
-    private Point compareVector = new Point(0, 1);
+    private PointF firstTouchPoint, vector;
+    private PointF compareVector = new PointF(0f, 1f);
     private int traceId = -1;
     private Inkpad inkpad;
 }

@@ -13,6 +13,7 @@ import org.codehaus.jackson.annotate.JsonProperty;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 
+import android.graphics.PointF;
 import es.skastro.gcodepainter.draw.document.Document;
 import es.skastro.gcodepainter.draw.document.Point;
 import es.skastro.gcodepainter.draw.document.TracePoint;
@@ -54,8 +55,8 @@ public class Inkpad {
         this.points = new ArrayList<TracePoint>();
         if (points.size() > 0) {
 
-            this.points.add(new TracePoint(new Point(0.0, 0.0)));
-            Point origin = points.get(0).getPoint();
+            this.points.add(new TracePoint(new PointF(0f, 0f)));
+            PointF origin = points.get(0).getPoint();
             for (int i = 1; i < points.size(); i++) {
                 this.points.add(new TracePoint(Point.minus(points.get(i).getPoint(), origin)));
             }
@@ -74,12 +75,12 @@ public class Inkpad {
         FileUtils.copyFile(tmp, file);
     }
 
-    public List<TracePoint> getPoints(Point basePoint, double scale, double angle) {
+    public List<TracePoint> getPoints(PointF basePoint, double scale, double angle) {
         List<TracePoint> res = new ArrayList<TracePoint>(points.size());
         for (TracePoint p : points) {
-            Point rotated = Point.rotate(p.getPoint(), angle);
-            res.add(new TracePoint(new Point(rotated.getX() * scale + basePoint.getX(), rotated.getY() * scale
-                    + basePoint.getY())));
+            PointF rotated = Point.rotate(p.getPoint(), angle);
+            res.add(new TracePoint(new PointF((float) (rotated.x * scale + basePoint.x),
+                    (float) (rotated.y * scale + basePoint.y))));
         }
         return res;
     }

@@ -3,19 +3,21 @@ package es.skastro.gcodepainter.draw.document;
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.lang.builder.ToStringStyle;
 
+import android.graphics.PointF;
+
 public class TracePoint {
-    private Point point;
+    private PointF point;
 
     public TracePoint() {
 
     }
 
-    public TracePoint(Point point) {
+    public TracePoint(PointF point) {
         super();
         this.point = point;
     }
 
-    public Point getPoint() {
+    public PointF getPoint() {
         return point;
     }
 

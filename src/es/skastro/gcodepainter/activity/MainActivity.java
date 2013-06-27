@@ -21,6 +21,8 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.PointF;
+import android.graphics.RectF;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -49,7 +51,6 @@ import es.skastro.android.util.bluetooth.DeviceListActivity;
 import es.skastro.android.util.component.VerticalSeekBar;
 import es.skastro.gcodepainter.R;
 import es.skastro.gcodepainter.draw.document.Document;
-import es.skastro.gcodepainter.draw.document.Point;
 import es.skastro.gcodepainter.draw.document.Trace;
 import es.skastro.gcodepainter.draw.document.TracePoint;
 import es.skastro.gcodepainter.draw.tool.inkpad.Inkpad;
@@ -266,7 +267,7 @@ public class MainActivity extends Activity implements Observer {
     private void newDraw() {
         document = new Document();
         int id = document.createTrace();
-        document.addPoint(id, new TracePoint(new Point(0, 0)));
+        document.addPoint(id, new TracePoint(new PointF(0f, 0f)));
         document.commitTrace(id);
         changeDocument(document);
         setCurrentDrawFilename(null);
@@ -321,7 +322,7 @@ public class MainActivity extends Activity implements Observer {
                     @Override
                     public boolean onOkClicked(String value) {
                         try {
-                            Pattern filenamePattern = Pattern.compile("^[a-z0-9]+$");
+                            Pattern filenamePattern = Pattern.compile("^[a-z0-9_ \\-]+$");
                             if (filenamePattern.matcher(value).matches()) {
                                 setCurrentDrawFilename(value);
                                 File target = new File(dir.getAbsoluteFile() + File.separator + currentDrawFilename
@@ -336,7 +337,7 @@ public class MainActivity extends Activity implements Observer {
                             } else {
                                 SimpleOkAlertDialog
                                         .show(MainActivity.this, "Nome inválido",
-                                                "O nome seleccionado non é válido, só se poden utilizar letras e números. Volva a intentalo.");
+                                                "O nome seleccionado non é válido, só se poden utilizar letras e números, espazos e guión baixo. Volva a intentalo.");
                             }
                         } catch (Exception e) {
                             SimpleOkAlertDialog.show(MainActivity.this, "Error",
@@ -549,13 +550,12 @@ public class MainActivity extends Activity implements Observer {
     }
 
     int lastTraceIdSent = -1;
-    Point gcode_bottomLeft = new Point(0.0, 0.0);
-    Point gcode_topRight = new Point(125.0, 85.6);
+    RectF gcode_margins = new RectF(0f, 85.6f, 125.0f, 0f);
+
     CoordinateConversor gcode_conversor;
 
     private void resetGcodeConversion() {
-        gcode_conversor = new CoordinateConversor(document.bottomLeft, document.topRight, gcode_bottomLeft,
-                gcode_topRight);
+        gcode_conversor = new CoordinateConversor(document.getMargins(), gcode_margins);
         lastTraceIdSent = -1;
     }
 

@@ -15,37 +15,15 @@ import org.codehaus.jackson.annotate.JsonProperty;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 
+import android.graphics.PointF;
+import android.graphics.RectF;
+
 public class Document extends Observable {
 
     public enum ActionType {
         ACTION_NONE, POLYLINE_START, POLYLINE_POINT, POLYLINE_END
     };
 
-    @JsonProperty("traces")
-    ArrayList<Trace> traces;
-
-    @JsonProperty("minPointDistance")
-    private double minPointDistance = 2.5;
-    // if the angle between 2 consecutive lines is less than this value the middle point is deleted
-    @JsonProperty("deltaAngleIgnore")
-    private double deltaAngleIgnore = 0.2; // radians
-
-    // if the angle between 2 lines is more than this value, the middle point is never deleted
-    @JsonProperty("deltaAngleForceNotIgnore")
-    private double deltaAngleForceNotIgnore = 0.1;
-
-    @JsonIgnore
-    public final Point bottomLeft = new Point(0.0, 0.0);
-    @JsonIgnore
-    public final Point topRight = new Point(100.0, 67.8);
-
-    @JsonIgnore
-    private Trace currentTrace;
-
-    @JsonProperty("showing")
-    private int showingTraceId;
-
-    private static ObjectMapper mapper;
     static {
         mapper = new ObjectMapper();
     }
@@ -160,9 +138,9 @@ public class Document extends Observable {
             return null;
     }
 
-    private boolean isOutbounds(Point p) {
-        return Double.compare(p.getX(), bottomLeft.getX()) < 0 || Double.compare(p.getX(), topRight.getX()) > 0
-                || Double.compare(p.getY(), bottomLeft.getY()) < 0 || Double.compare(p.getY(), topRight.getY()) > 0;
+    private boolean isOutbounds(PointF p) {
+        return Double.compare(p.x, margins.left) < 0 || Double.compare(p.x, margins.right) > 0
+                || Double.compare(p.y, margins.left) < 0 || Double.compare(p.y, margins.top) > 0;
     }
 
     private final int LEFT = 1;
@@ -170,48 +148,40 @@ public class Document extends Observable {
     private final int RIGHT = 4;
     private final int BOTTOM = 16;
 
-    private int getOnEdge(Point p) {
+    private int getOnEdge(PointF p) {
         int res = 0;
         if (!isOutbounds(p)) {
-            if (Double.compare(p.getX(), bottomLeft.getX()) == 0)
+            if (Float.compare(p.x, margins.left) == 0)
                 res |= LEFT;
 
-            if (Double.compare(p.getX(), topRight.getX()) == 0)
+            if (Float.compare(p.x, margins.right) == 0)
                 res |= RIGHT;
 
-            if (Double.compare(p.getY(), bottomLeft.getY()) == 0)
+            if (Float.compare(p.y, margins.left) == 0)
                 res |= BOTTOM;
 
-            if (Double.compare(p.getY(), topRight.getY()) == 0)
+            if (Float.compare(p.y, margins.top) == 0)
                 res |= TOP;
         }
         return res;
     }
 
-    // private boolean isOnLimit(Point p) {
-    // return !isOutbounds(p)
-    // && (Double.compare(p.getX(), bottomLeft.getX()) == 0 || Double.compare(p.getX(), topRight.getX()) == 0
-    // || Double.compare(p.getY(), bottomLeft.getY()) == 0 || Double
-    // .compare(p.getY(), topRight.getY()) == 0);
-    // }
     public void deleteOutboundPoints(List<TracePoint> list) {
-        Point p0, p1;
+        PointF p0, p1;
         boolean out0, out1, lim0, lim1;
         // remove outside points
         if (list.size() > 0) {
             p0 = list.get(0).getPoint();
             if (isOutbounds(p0)) { // this means that the first point is outside. We don't know the previous point
                 // so we only get the nearest inside point
-                p0.setX(Math.max(bottomLeft.getX(), Math.min(topRight.getX(), p0.getX())));
-                p0.setY(Math.max(bottomLeft.getY(), Math.min(topRight.getY(), p0.getY())));
+                p0.x = Math.max(margins.left, Math.min(margins.right, p0.x));
+                p0.y = Math.max(margins.left, Math.min(margins.top, p0.y));
             }
 
             if (list.size() > 1) {
                 p0 = list.get(list.size() - 1).getPoint();
                 if (isOutbounds(p0)) {
                     list.remove(list.size() - 1);
-                    // p0.setX(Math.max(bottomLeft.getX(), Math.min(topRight.getX(), p0.getX())));
-                    // p0.setY(Math.max(bottomLeft.getY(), Math.min(topRight.getY(), p0.getY())));
                 }
             }
 
@@ -223,7 +193,7 @@ public class Document extends Observable {
                 out1 = isOutbounds(p1);
                 lim1 = getOnEdge(p1) != 0;
                 if (!lim0 && !lim1 && (out0 != out1)) {
-                    Point in, out;
+                    PointF in, out;
                     if (out0) {
                         out = p0;
                         in = p1;
@@ -231,30 +201,31 @@ public class Document extends Observable {
                         out = p1;
                         in = p0;
                     }
-                    Point v = Point.minus(out, in);
-                    double m = v.getY() / v.getX();
-                    Point intersec = new Point(out);
-                    boolean top = (in.getY() - topRight.getY()) * (intersec.getY() - topRight.getY()) < 0;
+                    PointF v = Point.minus(out, in);
+                    float m = v.y / v.x;
+                    PointF intersec = new PointF();
+                    intersec.set(out);
+                    boolean top = (in.y - margins.top) * (intersec.y - margins.top) < 0;
                     if (top) {
                         // x1 = (y1 - y0)/m + x0, with y1 = topRight.y
-                        intersec = new Point((topRight.getY() - in.getY()) / m + in.getX(), topRight.getY());
+                        intersec = new PointF((float) ((margins.top - in.y) / m + in.x), margins.top);
                     }
-                    boolean bottom = (in.getY() - bottomLeft.getY()) * (intersec.getY() - bottomLeft.getY()) < 0;
+                    boolean bottom = (in.y - margins.left) * (intersec.y - margins.left) < 0;
                     if (bottom) {
                         // x1 = (y1 - y0)/m + x0, with y1 = bottomLeft.y
-                        intersec = new Point((bottomLeft.getY() - in.getY()) / m + in.getX(), bottomLeft.getY());
+                        intersec = new PointF((float) ((margins.left - in.y) / m + in.x), margins.left);
                     }
 
-                    boolean right = (in.getX() - topRight.getX()) * (intersec.getX() - topRight.getX()) < 0;
+                    boolean right = (in.x - margins.right) * (intersec.x - margins.right) < 0;
                     if (right) {
                         // y1 = (x1 - x0)*m + y0, with x1 = topRight.x
-                        intersec = new Point(topRight.getX(), (topRight.getX() - in.getX()) * m + in.getY());
+                        intersec = new PointF(margins.right, (float) ((margins.right - in.x) * m + in.y));
                     }
 
-                    boolean left = (in.getX() - bottomLeft.getX()) * (intersec.getX() - bottomLeft.getX()) < 0;
+                    boolean left = (in.x - margins.left) * (intersec.x - margins.left) < 0;
                     if (left) {
                         // y1 = (x1 - x0)*m + y0, with x1 = bottomLeft.x
-                        intersec = new Point(bottomLeft.getX(), (bottomLeft.getX() - in.getX()) * m + in.getY());
+                        intersec = new PointF(margins.left, (float) ((margins.left - in.x) * m + in.y));
                     }
                     list.add(i, new TracePoint(intersec));
                     i++;
@@ -266,32 +237,32 @@ public class Document extends Observable {
                 if (isOutbounds(list.get(i).getPoint())) {
                     if (i > 0 && i < list.size() - 1) {
                         // control if the trace went outside on a different edge than the inside trace
-                        Point previous = list.get(i - 1).getPoint();
-                        Point next = list.get(i + 1).getPoint();
+                        PointF previous = list.get(i - 1).getPoint();
+                        PointF next = list.get(i + 1).getPoint();
                         int limit0 = getOnEdge(previous);
                         int limit1 = getOnEdge(next);
                         if (limit0 != limit1 && limit0 != 0 && limit1 != 0) {
-                            Point newPoint0 = null, newPoint1 = null;
+                            PointF newPoint0 = null, newPoint1 = null;
                             switch (limit0 * limit1) {
                             case LEFT * TOP:
-                                newPoint0 = new Point(bottomLeft.getX(), topRight.getY());
+                                newPoint0 = new PointF(margins.left, margins.top);
                                 break;
                             case RIGHT * TOP:
-                                newPoint0 = new Point(topRight);
+                                newPoint0 = new PointF(margins.right, margins.top);
                                 break;
                             case RIGHT * BOTTOM:
-                                newPoint0 = new Point(topRight.getX(), bottomLeft.getY());
+                                newPoint0 = new PointF(margins.right, margins.left);
                                 break;
                             case LEFT * BOTTOM:
-                                newPoint0 = new Point(bottomLeft);
+                                newPoint0 = new PointF(margins.left, margins.bottom);
                                 break;
                             case LEFT * RIGHT:
-                                newPoint0 = new Point(previous.getX(), topRight.getY());
-                                newPoint1 = new Point(next.getX(), topRight.getY());
+                                newPoint0 = new PointF(previous.x, margins.top);
+                                newPoint1 = new PointF(next.x, margins.top);
                                 break;
                             case TOP * BOTTOM:
-                                newPoint0 = new Point(topRight.getX(), previous.getY());
-                                newPoint1 = new Point(topRight.getX(), next.getY());
+                                newPoint0 = new PointF(margins.right, previous.y);
+                                newPoint1 = new PointF(margins.right, next.y);
                                 break;
                             }
                             if (newPoint1 != null) {
@@ -309,7 +280,7 @@ public class Document extends Observable {
     }
 
     public int simplifyPoints(List<TracePoint> list) {
-        Point p0, p1, p2;
+        PointF p0, p1, p2;
 
         int res = list.size();
         // simplifyPoints
@@ -318,7 +289,7 @@ public class Document extends Observable {
                 p0 = list.get(i - 2).getPoint();
                 p1 = list.get(i - 1).getPoint();
                 p2 = list.get(i).getPoint();
-                double deltaAngle = Math.abs(Point.angle(Point.minus(p1, p0), Point.minus(p2, p1)));
+                float deltaAngle = (float) Math.abs(Point.angle(Point.minus(p1, p0), Point.minus(p2, p1)));
                 // double distance1 = Point.distance(p0, p1);
                 // double distance2 = Point.distance(p1, p2);
                 // double scaleDistance = distance1 / (distance2 + 0.0001);
@@ -424,4 +395,31 @@ public class Document extends Observable {
         notifyObservers();
     }
 
+    public RectF getMargins() {
+        return margins;
+    }
+
+    @JsonProperty("traces")
+    ArrayList<Trace> traces;
+
+    @JsonProperty("minPointDistance")
+    private float minPointDistance = 2.5f;
+    // if the angle between 2 consecutive lines is less than this value the middle point is deleted
+    @JsonProperty("deltaAngleIgnore")
+    private float deltaAngleIgnore = 0.2f; // radians
+
+    // if the angle between 2 lines is more than this value, the middle point is never deleted
+    @JsonProperty("deltaAngleForceNotIgnore")
+    private float deltaAngleForceNotIgnore = 0.1f;
+
+    @JsonProperty("margins")
+    private final RectF margins = new RectF(0f, 67.8f, 100f, 0f);
+
+    @JsonIgnore
+    private Trace currentTrace;
+
+    @JsonProperty("showing")
+    private int showingTraceId;
+
+    private static ObjectMapper mapper;
 }
