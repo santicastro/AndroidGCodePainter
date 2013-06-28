@@ -55,6 +55,7 @@ import es.skastro.gcodepainter.draw.document.TracePoint;
 import es.skastro.gcodepainter.draw.tool.inkpad.Inkpad;
 import es.skastro.gcodepainter.draw.tool.inkpad.ToolInkpad;
 import es.skastro.gcodepainter.draw.tool.line.ToolLine;
+import es.skastro.gcodepainter.draw.tool.text.ToolText;
 import es.skastro.gcodepainter.draw.tool.zoom.ToolZoom;
 import es.skastro.gcodepainter.draw.util.CoordinateConversor;
 import es.skastro.gcodepainter.view.DrawView;
@@ -111,6 +112,22 @@ public class MainActivity extends Activity implements Observer {
             @Override
             public void onClick(View v) {
                 selectToolZoom();
+            }
+        });
+
+        btnToolText = (ImageButton) findViewById(R.id.toolText);
+        btnToolText.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                StringPrompt sp = new StringPrompt(MainActivity.this, "Texto a escribir", "", "") {
+
+                    @Override
+                    public boolean onOkClicked(String value) {
+                        selectToolText(value);
+                        return true;
+                    }
+                };
+                sp.show();
             }
         });
 
@@ -216,6 +233,7 @@ public class MainActivity extends Activity implements Observer {
         btnToolLine.setBackground(getResources().getDrawable(R.drawable.pressed));
         btnToolInkpad.setBackground(getResources().getDrawable(R.drawable.not_pressed));
         btnToolZoom.setBackground(getResources().getDrawable(R.drawable.not_pressed));
+        btnToolText.setBackground(getResources().getDrawable(R.drawable.not_pressed));
     }
 
     private void selectToolInkpad(Inkpad inkpad, String name) {
@@ -224,6 +242,7 @@ public class MainActivity extends Activity implements Observer {
         btnToolInkpad.setBackground(getResources().getDrawable(R.drawable.pressed));
         btnToolLine.setBackground(getResources().getDrawable(R.drawable.not_pressed));
         btnToolZoom.setBackground(getResources().getDrawable(R.drawable.not_pressed));
+        btnToolText.setBackground(getResources().getDrawable(R.drawable.not_pressed));
     }
 
     private void selectToolZoom() {
@@ -231,6 +250,16 @@ public class MainActivity extends Activity implements Observer {
         btnToolZoom.setBackground(getResources().getDrawable(R.drawable.pressed));
         btnToolLine.setBackground(getResources().getDrawable(R.drawable.not_pressed));
         btnToolInkpad.setBackground(getResources().getDrawable(R.drawable.not_pressed));
+        btnToolText.setBackground(getResources().getDrawable(R.drawable.not_pressed));
+    }
+
+    private void selectToolText(String text) {
+        ToolText ttext = new ToolText(getApplicationContext(), document, getTextpadsDirectory(), text);
+        drawView.setTool(ttext);
+        btnToolZoom.setBackground(getResources().getDrawable(R.drawable.not_pressed));
+        btnToolLine.setBackground(getResources().getDrawable(R.drawable.not_pressed));
+        btnToolInkpad.setBackground(getResources().getDrawable(R.drawable.not_pressed));
+        btnToolText.setBackground(getResources().getDrawable(R.drawable.pressed));
     }
 
     private void setCurrentDrawFilename(String filename) {
@@ -321,7 +350,6 @@ public class MainActivity extends Activity implements Observer {
                     @Override
                     public boolean onOkClicked(String value) {
                         try {
-                            Pattern filenamePattern = Pattern.compile("^[a-z0-9_ \\-]+$");
                             if (filenamePattern.matcher(value).matches()) {
                                 setCurrentDrawFilename(value);
                                 File target = new File(dir.getAbsoluteFile() + File.separator + currentDrawFilename
@@ -364,7 +392,6 @@ public class MainActivity extends Activity implements Observer {
                     @Override
                     public boolean onOkClicked(String value) {
                         try {
-                            Pattern filenamePattern = Pattern.compile("^[a-z0-9]+$");
                             if (filenamePattern.matcher(value).matches()) {
                                 String inkpadName = value;
                                 File target = new File(dir.getAbsoluteFile() + File.separator + inkpadName + ".ipa");
@@ -634,6 +661,27 @@ public class MainActivity extends Activity implements Observer {
         return inkpadsDirectory;
     }
 
+    File textpadsDirectory = null;
+
+    private File getTextpadsDirectory() {
+        if (textpadsDirectory == null) {
+            textpadsDirectory = new File(getApplicationContext().getExternalFilesDir(null), "textpads/");
+            if (!textpadsDirectory.exists() && !textpadsDirectory.mkdir()) {
+                SimpleOkAlertDialog.show(this, "Erro abrindo o cartafol",
+                        "Houbo un problema abrindo o cartafol de caracteres");
+                finish();
+            }
+            File noMediaFile = new File(textpadsDirectory, ".Nomedia");
+            if (!noMediaFile.exists())
+                try {
+                    noMediaFile.createNewFile();
+                } catch (IOException e) {
+
+                }
+        }
+        return textpadsDirectory;
+    }
+
     // /////////////////////////
     // BLUETOOTH
     // /////////////////////////
@@ -791,7 +839,7 @@ public class MainActivity extends Activity implements Observer {
     private Document document;
     private String currentDrawFilename = null;
     private Button btnUndo, btnRedo, btnConnect, btnSend;
-    private ImageButton btnToolLine, btnToolInkpad, btnToolZoom;
+    private ImageButton btnToolLine, btnToolInkpad, btnToolZoom, btnToolText;
     private ScaleImageView drawBackground;
     private CheckBox chkAutomaticSend;
     private VerticalSeekBar zoomBar;
@@ -799,6 +847,7 @@ public class MainActivity extends Activity implements Observer {
     private TextView zoomText;
 
     private final DecimalFormat df = new DecimalFormat("0.0");
+    Pattern filenamePattern = Pattern.compile("^[A-ZÑña-z0-9_ \\-]+$");
 
     final static int CONNECT_BLUETOOTH_SECURE = 100;
     final static int CONNECT_BLUETOOTH_INSECURE = 101;

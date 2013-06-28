@@ -46,6 +46,10 @@ public class ToolInkpad extends Tool {
 
     }
 
+    protected void setInkpad(Inkpad inkpad) {
+        this.inkpad = inkpad;
+    }
+
     private PointF firstTouchPoint, vector;
     private PointF compareVector = new PointF(0f, 1f);
     private int traceId = -1;

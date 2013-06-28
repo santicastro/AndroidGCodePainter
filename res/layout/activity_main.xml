@@ -169,6 +169,17 @@
             android:src="@drawable/inkpad"
             android:text="" />
 
+        <ImageButton
+            android:id="@+id/toolText"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/toolInkpad"
+            android:background="@drawable/not_pressed"
+            android:contentDescription="toolText"
+            android:src="@drawable/text"
+            android:text="" />
+
         <es.skastro.android.util.component.VerticalSeekBar
             android:id="@+id/zoomBar"
             android:layout_width="wrap_content"

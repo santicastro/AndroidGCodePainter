@@ -9,11 +9,13 @@ import java.util.List;
 
 import org.apache.commons.io.FileUtils;
 import org.codehaus.jackson.JsonParseException;
+import org.codehaus.jackson.annotate.JsonIgnore;
 import org.codehaus.jackson.annotate.JsonProperty;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import android.graphics.PointF;
+import android.graphics.RectF;
 import es.skastro.gcodepainter.draw.document.Document;
 import es.skastro.gcodepainter.draw.document.PointFUtils;
 import es.skastro.gcodepainter.draw.document.TracePoint;
@@ -54,7 +56,6 @@ public class Inkpad {
     public Inkpad(List<TracePoint> points) {
         this.points = new ArrayList<TracePoint>();
         if (points.size() > 0) {
-
             this.points.add(new TracePoint(new PointF(0f, 0f)));
             PointF origin = points.get(0).getPoint();
             for (int i = 1; i < points.size(); i++) {
@@ -85,4 +86,40 @@ public class Inkpad {
         return res;
     }
 
+    @JsonIgnore
+    public RectF getBounds() {
+        if (bounds == null) {
+            PointF p = points.get(0).getPoint();
+            if (points.size() == 0)
+                bounds = new RectF(0f, 0f, 0f, 0f);
+            else
+                bounds = new RectF(p.x, p.y, p.x, p.y);
+            for (TracePoint tp : points) {
+                p = tp.getPoint();
+                if (p.x < bounds.left)
+                    bounds.left = p.x;
+                if (p.x > bounds.right)
+                    bounds.right = p.x;
+                if (p.y < bounds.bottom)
+                    bounds.bottom = p.y;
+                if (p.y > bounds.top)
+                    bounds.top = p.y;
+            }
+        }
+        return bounds;
+    }
+
+    @JsonIgnore
+    public PointF getStartOffset() {
+        RectF bs = getBounds();
+        return new PointF(bs.left, bs.bottom);
+    }
+
+    @JsonIgnore
+    public PointF getLastOffset() {
+        RectF bs = getBounds();
+        return new PointF(bs.right, bs.bottom);
+    }
+
+    private RectF bounds = null;
 }

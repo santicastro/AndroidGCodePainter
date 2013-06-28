@@ -55,7 +55,8 @@
         android:icon="@drawable/icon_preferences"
         android:orderInCategory="100"
         android:showAsAction="always|withText"
-        android:title="Opcións"/>
+        android:title="Opcións"
+        android:visible="false"/>
     <item
         android:id="@+id/mnuQuit"
         android:icon="@drawable/icon_quit"

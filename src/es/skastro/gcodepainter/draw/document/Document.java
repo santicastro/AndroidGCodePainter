@@ -289,13 +289,18 @@ public class Document extends Observable {
                 p0 = list.get(i - 2).getPoint();
                 p1 = list.get(i - 1).getPoint();
                 p2 = list.get(i).getPoint();
-                float deltaAngle = (float) Math.abs(PointFUtils.angle(PointFUtils.minus(p1, p0), PointFUtils.minus(p2, p1)));
+                PointF v0 = PointFUtils.minus(p1, p0);
+                PointF v1 = PointFUtils.minus(p2, p1);
+                float deltaAngle = (float) Math.abs(PointFUtils.angle(v0, v1));
                 // double distance1 = Point.distance(p0, p1);
                 // double distance2 = Point.distance(p1, p2);
                 // double scaleDistance = distance1 / (distance2 + 0.0001);
                 // if (deltaAngle < deltaAngleIgnore && (scaleDistance > 0.33 && scaleDistance < 3)) {
-                if (deltaAngle < deltaAngleIgnore) {
+                if ((deltaAngle < deltaAngleIgnore) || (v0.length() < minPointDistance)) {
                     list.remove(i - 1);
+                    i--;
+                } else if (v1.length() < minPointDistance) {
+                    list.remove(i);
                     i--;
                 } else if (deltaAngle < deltaAngleForceNotIgnore) {
                     if (PointFUtils.distance(p0, p2) < minPointDistance) {
@@ -403,7 +408,7 @@ public class Document extends Observable {
     ArrayList<Trace> traces;
 
     @JsonProperty("minPointDistance")
-    private float minPointDistance = 2.5f;
+    private float minPointDistance = 1f;
     // if the angle between 2 consecutive lines is less than this value the middle point is deleted
     @JsonProperty("deltaAngleIgnore")
     private float deltaAngleIgnore = 0.2f; // radians
