@@ -2,14 +2,10 @@ package es.skastro.gcodepainter.draw.document;
 
 import android.graphics.PointF;
 
-public abstract class Point {
-
-    // @JsonIgnore
-    // private DecimalFormat df = new DecimalFormat("0.0000");
+public abstract class PointFUtils {
 
     public static float distance(PointF a, PointF b) {
         return minus(b, a).length();
-        // return Math.sqrt(Math.pow((b.x - a.x), 2.0) + Math.pow((b.y - a.y), 2.0));
     }
 
     public static double angle(PointF a, PointF b) {

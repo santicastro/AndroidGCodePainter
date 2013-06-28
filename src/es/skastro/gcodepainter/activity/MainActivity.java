@@ -38,7 +38,6 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -59,6 +58,7 @@ import es.skastro.gcodepainter.draw.tool.line.ToolLine;
 import es.skastro.gcodepainter.draw.tool.zoom.ToolZoom;
 import es.skastro.gcodepainter.draw.util.CoordinateConversor;
 import es.skastro.gcodepainter.view.DrawView;
+import es.skastro.gcodepainter.view.ScaleImageView;
 
 /***
  * Real etch-a-sketch drawable dimmensions: 15.5cm x 10.5cm (aspect ratio: 1,4762)
@@ -146,7 +146,7 @@ public class MainActivity extends Activity implements Observer {
             }
         });
 
-        drawBackground = (ImageView) findViewById(R.id.drawBackground);
+        drawBackground = (ScaleImageView) findViewById(R.id.drawBackground);
 
         drawView = (DrawView) findViewById(R.id.drawView);
 
@@ -188,7 +188,6 @@ public class MainActivity extends Activity implements Observer {
 
         selectToolLine();
         updateZoomInfo();
-
     }
 
     private void changeDocument(Document document) {
@@ -207,6 +206,7 @@ public class MainActivity extends Activity implements Observer {
             update(document, null);
             selectToolLine();
             resetGcodeConversion();
+            updateZoomInfo();
         }
     }
 
@@ -246,11 +246,10 @@ public class MainActivity extends Activity implements Observer {
         if (filename == null) {
             changeBackground((Bitmap) null);
         } else {
-            final int MAX_SIZE = 1024;
             File file = new File(filename);
             Bitmap imageBitmap;
             try {
-                imageBitmap = BitmapUtils.decodeSampledBitmapFromFile(file, MAX_SIZE, MAX_SIZE);
+                imageBitmap = BitmapUtils.decodeSampledBitmapFromFile(file, drawView.getWidth(), drawView.getHeight());
                 changeBackground(imageBitmap);
             } catch (OutOfMemoryError ex) {
                 imageBitmap = null;
@@ -470,6 +469,7 @@ public class MainActivity extends Activity implements Observer {
             saveDraw();
             break;
         case R.id.mnuBackgroundFile:
+            // changeBackground("/storage/emulated/0/DCIM/Camera/IMG_20130617_003844.jpg");
             selectBackgroundFromGallery();
             break;
         case R.id.mnuBackgroundCamera:
@@ -542,17 +542,19 @@ public class MainActivity extends Activity implements Observer {
     }
 
     private void updateZoomInfo() {
-        zoomText.setText(df.format(drawView.getScaleFactor()) + "x");
+        drawBackground.setZoomFactor(drawView.getZoomFactor());
+        drawBackground.setmZoomTranslate(drawView.getZoomTranslate());
+
+        zoomText.setText(df.format(drawView.getZoomFactor()) + "x");
         if (!zoomBar.isSelected()) {
-            zoomBar.setProgress((int) (((drawView.getScaleFactor() - 1f) / (toolZoom.getMaxScale() - 1f)) * zoomBar
+            zoomBar.setProgress((int) (((drawView.getZoomFactor() - 1f) / (toolZoom.getMaxScale() - 1f)) * zoomBar
                     .getMax()));
         }
     }
 
-    int lastTraceIdSent = -1;
-    RectF gcode_margins = new RectF(0f, 85.6f, 125.0f, 0f);
-
-    CoordinateConversor gcode_conversor;
+    private int lastTraceIdSent = -1;
+    private RectF gcode_margins = new RectF(0f, 85.6f, 125.0f, 0f);
+    private CoordinateConversor gcode_conversor;
 
     private void resetGcodeConversion() {
         gcode_conversor = new CoordinateConversor(document.getMargins(), gcode_margins);
@@ -790,7 +792,7 @@ public class MainActivity extends Activity implements Observer {
     private String currentDrawFilename = null;
     private Button btnUndo, btnRedo, btnConnect, btnSend;
     private ImageButton btnToolLine, btnToolInkpad, btnToolZoom;
-    private ImageView drawBackground;
+    private ScaleImageView drawBackground;
     private CheckBox chkAutomaticSend;
     private VerticalSeekBar zoomBar;
     private ToolZoom toolZoom;

@@ -201,7 +201,7 @@ public class Document extends Observable {
                         out = p1;
                         in = p0;
                     }
-                    PointF v = Point.minus(out, in);
+                    PointF v = PointFUtils.minus(out, in);
                     float m = v.y / v.x;
                     PointF intersec = new PointF();
                     intersec.set(out);
@@ -289,7 +289,7 @@ public class Document extends Observable {
                 p0 = list.get(i - 2).getPoint();
                 p1 = list.get(i - 1).getPoint();
                 p2 = list.get(i).getPoint();
-                float deltaAngle = (float) Math.abs(Point.angle(Point.minus(p1, p0), Point.minus(p2, p1)));
+                float deltaAngle = (float) Math.abs(PointFUtils.angle(PointFUtils.minus(p1, p0), PointFUtils.minus(p2, p1)));
                 // double distance1 = Point.distance(p0, p1);
                 // double distance2 = Point.distance(p1, p2);
                 // double scaleDistance = distance1 / (distance2 + 0.0001);
@@ -298,7 +298,7 @@ public class Document extends Observable {
                     list.remove(i - 1);
                     i--;
                 } else if (deltaAngle < deltaAngleForceNotIgnore) {
-                    if (Point.distance(p0, p2) < minPointDistance) {
+                    if (PointFUtils.distance(p0, p2) < minPointDistance) {
                         list.remove(i - 1);
                         i--;
                     }

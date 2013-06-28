@@ -4,7 +4,7 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity" >
 
-    <ImageView
+    <es.skastro.gcodepainter.view.ScaleImageView
         android:id="@+id/drawBackground"
         android:layout_width="694dp"
         android:layout_height="470dp"

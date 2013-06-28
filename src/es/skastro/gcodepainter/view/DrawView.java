@@ -39,19 +39,18 @@ public class DrawView extends View implements OnTouchListener, Observer {
         mZoomTranslate = new PointF(0.f, 0.f);
     }
 
-    public float getScaleFactor() {
+    public float getZoomFactor() {
         return mZoomFactor;
     }
 
-    public void setScaleFactor(float newFactor) {
+    public void setZoomFactor(float newFactor) {
         newFactor = Math.max(1.f, Math.min(newFactor, 5.0f));
         if (Float.compare(mZoomFactor, newFactor) != 0) {
             float relation = newFactor - mZoomFactor;
             float deltaX = 0f, deltaY = 0f;
 
-            // TODO: correct this, it's not exact
-            deltaX = margins.right / mZoomFactor * relation / 2;
-            deltaY = margins.top / mZoomFactor * relation / 2;
+            deltaX = margins.right * relation / 2;
+            deltaY = margins.top * relation / 2;
             PointF newZoomTranslate = new PointF(mZoomTranslate.x - deltaX, mZoomTranslate.y - deltaY);
 
             this.mZoomFactor = newFactor;
@@ -62,11 +61,11 @@ public class DrawView extends View implements OnTouchListener, Observer {
         }
     }
 
-    public PointF getTranslate() {
+    public PointF getZoomTranslate() {
         return mZoomTranslate;
     }
 
-    public void setTranslate(PointF mTranslate) {
+    public void setZoomTranslate(PointF mTranslate) {
         checkTranslate(mTranslate);
         if (!mZoomTranslate.equals(mTranslate)) {
             this.mZoomTranslate = mTranslate;
@@ -125,7 +124,6 @@ public class DrawView extends View implements OnTouchListener, Observer {
 
     @Override
     public void onDraw(Canvas canvas) {
-
         canvas.save();
         canvas.scale(1.0f, -1.0f);
         canvas.translate(0f, -(float) margins.top);
@@ -228,9 +226,6 @@ public class DrawView extends View implements OnTouchListener, Observer {
     final int point_thickness = 3;
 
     private Paint paint_temporal_lines = new Paint();
-
-    // private Point view_bottomLeft = new Point(0.0, 0.0);
-    // private Point view_topRight = new Point(922.0, 625.0);
 
     private RectF margins = new RectF(0f, 625f, 922f, 0);
 

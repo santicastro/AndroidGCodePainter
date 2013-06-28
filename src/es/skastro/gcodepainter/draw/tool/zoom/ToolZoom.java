@@ -2,11 +2,10 @@ package es.skastro.gcodepainter.draw.tool.zoom;
 
 import android.content.Context;
 import android.graphics.PointF;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import es.skastro.gcodepainter.draw.document.Document;
-import es.skastro.gcodepainter.draw.document.Point;
+import es.skastro.gcodepainter.draw.document.PointFUtils;
 import es.skastro.gcodepainter.draw.tool.Tool;
 import es.skastro.gcodepainter.view.DrawView;
 
@@ -29,8 +28,7 @@ public class ToolZoom extends Tool {
 
     public void changeScale(float scale) {
         if (drawView != null) {
-            Log.d("changeScale", "changeScale: " + scale);
-            drawView.setScaleFactor(Math.max(1f, Math.min(scale, maxScale)));
+            drawView.setZoomFactor(Math.max(1f, Math.min(scale, maxScale)));
             setChanged();
             notifyObservers();
         }
@@ -42,16 +40,19 @@ public class ToolZoom extends Tool {
             firstTouchPoint = null;
             mScaleDetector.onTouchEvent(event);
         } else {
-            PointF point = new PointF(event.getX(), -event.getY());
+            PointF point = new PointF(event.getX(0), -event.getY(0));
             switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 firstTouchPoint = point;
-                oldTranslation = drawView.getTranslate();
+                oldTranslation = drawView.getZoomTranslate();
                 break;
+
             case MotionEvent.ACTION_MOVE:
                 if (firstTouchPoint != null) {
-                    PointF move = Point.plus(oldTranslation, Point.minus(point, firstTouchPoint));
-                    drawView.setTranslate(move);
+                    PointF move = PointFUtils.plus(oldTranslation, PointFUtils.minus(point, firstTouchPoint));
+                    drawView.setZoomTranslate(move);
+                    setChanged();
+                    notifyObservers();
                 }
                 break;
             case MotionEvent.ACTION_UP:
@@ -65,7 +66,7 @@ public class ToolZoom extends Tool {
     private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
         @Override
         public boolean onScale(ScaleGestureDetector detector) {
-            float scaleFactor = drawView.getScaleFactor() * detector.getScaleFactor();
+            float scaleFactor = drawView.getZoomFactor() * detector.getScaleFactor();
             changeScale(scaleFactor);
             return true;
         }

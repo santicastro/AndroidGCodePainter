@@ -15,7 +15,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 
 import android.graphics.PointF;
 import es.skastro.gcodepainter.draw.document.Document;
-import es.skastro.gcodepainter.draw.document.Point;
+import es.skastro.gcodepainter.draw.document.PointFUtils;
 import es.skastro.gcodepainter.draw.document.TracePoint;
 
 public class Inkpad {
@@ -58,7 +58,7 @@ public class Inkpad {
             this.points.add(new TracePoint(new PointF(0f, 0f)));
             PointF origin = points.get(0).getPoint();
             for (int i = 1; i < points.size(); i++) {
-                this.points.add(new TracePoint(Point.minus(points.get(i).getPoint(), origin)));
+                this.points.add(new TracePoint(PointFUtils.minus(points.get(i).getPoint(), origin)));
             }
         }
     }
@@ -78,7 +78,7 @@ public class Inkpad {
     public List<TracePoint> getPoints(PointF basePoint, double scale, double angle) {
         List<TracePoint> res = new ArrayList<TracePoint>(points.size());
         for (TracePoint p : points) {
-            PointF rotated = Point.rotate(p.getPoint(), angle);
+            PointF rotated = PointFUtils.rotate(p.getPoint(), angle);
             res.add(new TracePoint(new PointF((float) (rotated.x * scale + basePoint.x),
                     (float) (rotated.y * scale + basePoint.y))));
         }
