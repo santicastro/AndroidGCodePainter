@@ -607,7 +607,8 @@ public class MainActivity extends Activity implements Observer {
             Trace tr = document.getTrace(i);
             if (lastTraceIdSent < tr.getTraceId()) {
                 for (TracePoint p : tr.getPoints()) {
-                    sendMessage("G1 " + gcode_conversor.calculate(p.getPoint()).toString());
+                    PointF point = gcode_conversor.calculate(p.getPoint());
+                    sendMessage("G1 X" + point.x + " Y" + point.y);
                 }
                 lastTraceIdSent = tr.getTraceId();
             }
