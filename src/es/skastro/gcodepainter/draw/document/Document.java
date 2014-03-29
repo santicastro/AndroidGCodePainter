@@ -1,31 +1,47 @@
 package es.skastro.gcodepainter.draw.document;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Observable;
 
-import org.apache.commons.io.FileUtils;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.annotate.JsonIgnore;
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.annotate.JsonProperty;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.ObjectReader;
+import org.codehaus.jackson.map.ObjectWriter;
+import org.codehaus.jackson.map.exc.UnrecognizedPropertyException;
+import org.codehaus.jackson.map.ser.FilterProvider;
+import org.codehaus.jackson.map.ser.impl.SimpleBeanPropertyFilter;
+import org.codehaus.jackson.map.ser.impl.SimpleFilterProvider;
 
 import android.graphics.PointF;
 import android.graphics.RectF;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Document extends Observable {
 
     public enum ActionType {
         ACTION_NONE, POLYLINE_START, POLYLINE_POINT, POLYLINE_END
-    };
+    }
 
     static {
-        mapper = new ObjectMapper();
+        ObjectMapper mapper = new ObjectMapper();
+        // String[] ignorableFieldNames = { "empty" };
+        FilterProvider filters = new SimpleFilterProvider().addFilter("filter pointF 'empty' field",
+                SimpleBeanPropertyFilter.serializeAllExcept("empty"));
+        mapperWriter = mapper.writer(filters);
+        Document.mapper = mapper;
     }
 
     public Document() {
@@ -35,6 +51,24 @@ public class Document extends Observable {
     public static Document fromFile(File file) {
         try {
             return mapper.readValue(file, Document.class);
+        } catch (UnrecognizedPropertyException e) {
+            try {
+                String originalFile = file.getAbsolutePath();
+                File fileRecover = new File(originalFile + "__recovered");
+                if (fileRecover.exists())
+                    fileRecover.delete();
+                replace(",\"empty\":true", "", file, fileRecover);
+                file.renameTo(new File(originalFile + "__corrupt"));
+                fileRecover.renameTo(new File(originalFile));
+                try {
+                    return mapper.readValue(file, Document.class);
+                } catch (Exception e2) {
+                    return null;
+                }
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+
         } catch (JsonParseException e) {
             e.printStackTrace();
         } catch (JsonMappingException e) {
@@ -45,16 +79,31 @@ public class Document extends Observable {
         return null;
     }
 
+    public static void replace(String oldstring, String newstring, File in, File out) throws IOException {
+
+        BufferedReader reader = new BufferedReader(new FileReader(in));
+        PrintWriter writer = new PrintWriter(new FileWriter(out));
+        String line = null;
+        while ((line = reader.readLine()) != null)
+            writer.println(line.replaceAll(oldstring, newstring));
+
+        // I'm aware of the potential for resource leaks here. Proper resource
+        // handling has been omitted in the interest of brevity
+        reader.close();
+        writer.close();
+    }
+
     public void saveToDisk(File file) throws IOException {
         File tmp = File.createTempFile("drawfile", ".ske");
         OutputStream output = new FileOutputStream(tmp);
+        mapperWriter.writeValue(output, this);
+        // mapper.writeValue(output, this);
 
-        mapper.writeValue(output, this);
         output.close();
-
         if (file.exists())
             file.delete();
-        FileUtils.copyFile(tmp, file);
+        replace(",\"empty\":true", "", tmp, file);
+        // FileUtils.copyFile(tmp, file);
     }
 
     @JsonIgnore
@@ -427,4 +476,7 @@ public class Document extends Observable {
     private int showingTraceId;
 
     private static ObjectMapper mapper;
+    private static ObjectWriter mapperWriter;
+    private static ObjectReader mapperReader;
+
 }
