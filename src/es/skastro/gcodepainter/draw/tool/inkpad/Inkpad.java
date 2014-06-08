@@ -17,8 +17,8 @@ import org.codehaus.jackson.map.ObjectMapper;
 import android.graphics.PointF;
 import android.graphics.RectF;
 import es.skastro.gcodepainter.draw.document.Document;
-import es.skastro.gcodepainter.draw.document.PointFUtils;
 import es.skastro.gcodepainter.draw.document.TracePoint;
+import es.skastro.gcodepainter.draw.util.PointFUtils;
 
 public class Inkpad {
 

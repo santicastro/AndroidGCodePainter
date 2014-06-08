@@ -1,6 +1,6 @@
 package es.skastro.gcodepainter.gcode;
 
-import es.skastro.gcodepainter.draw.document.PointFUtils;
+import es.skastro.gcodepainter.draw.util.PointFUtils;
 
 public class GCodeInstruction {
 

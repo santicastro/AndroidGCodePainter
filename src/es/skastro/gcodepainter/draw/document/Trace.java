@@ -10,7 +10,6 @@ public class Trace {
     private List<TracePoint> points;
 
     public Trace() {
-
     }
 
     public Trace(int traceId) {

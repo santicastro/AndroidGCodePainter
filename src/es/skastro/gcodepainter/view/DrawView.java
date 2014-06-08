@@ -150,7 +150,9 @@ public class DrawView extends View implements OnTouchListener, Observer {
                 for (int i = 1; i < pointCount; i++) {
                     start = end;
                     end = coordinateDocument2View.calculate(document.getPoint(i).getPoint());
-                    auxDrawLine(canvas, start, end, paint_sent_lines, paint_points);
+                    boolean isMovement = document.getPoint(i).isMovement();
+                    auxDrawLine(canvas, start, end, paint_sent_lines, paint_points, isMovement);
+
                 }
             }
 
@@ -159,7 +161,8 @@ public class DrawView extends View implements OnTouchListener, Observer {
                     start = end;
                     end = coordinateDocument2View.calculate(document.getTemporalPoints().get(i).getPoint());
                     if (start != null) {
-                        auxDrawLine(canvas, start, end, paint_temporal_lines, null);
+                        boolean isMovement = document.getPoint(i).isMovement();
+                        auxDrawLine(canvas, start, end, paint_temporal_lines, null, isMovement);
                     }
                 }
             }
@@ -181,8 +184,11 @@ public class DrawView extends View implements OnTouchListener, Observer {
         invalidate();
     }
 
-    private void auxDrawLine(Canvas canvas, PointF start, PointF end, Paint paint_lines, Paint paint_points) {
-        canvas.drawLine((float) start.x, (float) start.y, (float) end.x, (float) end.y, paint_lines);
+    private void auxDrawLine(Canvas canvas, PointF start, PointF end, Paint paint_lines, Paint paint_points,
+            boolean isMovement) {
+        if (!isMovement) {
+            canvas.drawLine((float) start.x, (float) start.y, (float) end.x, (float) end.y, paint_lines);
+        }
         if (point_thickness > 0 && paint_points != null)
             canvas.drawCircle((float) end.x, (float) end.y, point_thickness, paint_points);
     }

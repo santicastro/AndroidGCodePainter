@@ -5,8 +5,8 @@ import android.graphics.PointF;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import es.skastro.gcodepainter.draw.document.Document;
-import es.skastro.gcodepainter.draw.document.PointFUtils;
 import es.skastro.gcodepainter.draw.tool.Tool;
+import es.skastro.gcodepainter.draw.util.PointFUtils;
 import es.skastro.gcodepainter.view.DrawView;
 
 public class ToolZoom extends Tool {

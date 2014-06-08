@@ -7,9 +7,9 @@ import android.graphics.PointF;
 
 public class TracePoint {
     private PointF point;
+    private boolean isMovement = false;
 
     public TracePoint() {
-
     }
 
     public TracePoint(PointF point) {
@@ -19,6 +19,10 @@ public class TracePoint {
 
     public PointF getPoint() {
         return point;
+    }
+
+    public boolean isMovement() {
+        return isMovement;
     }
 
     @Override

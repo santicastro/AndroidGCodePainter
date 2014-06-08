@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Observable;
 
@@ -18,7 +19,6 @@ import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.annotate.JsonProperty;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.ObjectReader;
 import org.codehaus.jackson.map.ObjectWriter;
 import org.codehaus.jackson.map.exc.UnrecognizedPropertyException;
 import org.codehaus.jackson.map.ser.FilterProvider;
@@ -27,6 +27,7 @@ import org.codehaus.jackson.map.ser.impl.SimpleFilterProvider;
 
 import android.graphics.PointF;
 import android.graphics.RectF;
+import es.skastro.gcodepainter.draw.util.PointFUtils;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Document extends Observable {
@@ -364,13 +365,7 @@ public class Document extends Observable {
     }
 
     public void addPoint(int traceId, TracePoint p) {
-        if (currentTrace != null && currentTrace.getTraceId() == traceId) {
-            currentTrace.getPoints().add(p);
-            setChanged();
-            notifyObservers();
-        } else {
-            throw new RuntimeException("Not implemented. A point can't be added to an intermediate trace");
-        }
+        addPoints(traceId, Arrays.asList(p));
     }
 
     public void addPoints(int traceId, List<TracePoint> list) {
@@ -477,6 +472,6 @@ public class Document extends Observable {
 
     private static ObjectMapper mapper;
     private static ObjectWriter mapperWriter;
-    private static ObjectReader mapperReader;
+    // private static ObjectReader mapperReader;
 
 }
