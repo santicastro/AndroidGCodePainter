@@ -23,6 +23,7 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.PointF;
 import android.graphics.RectF;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -91,6 +92,11 @@ public class MainActivity extends Activity implements Observer {
         });
 
         btnToolLine = (ImageButton) findViewById(R.id.toolLine);
+        btnToolInkpad = (ImageButton) findViewById(R.id.toolInkpad);
+        btnToolZoom = (ImageButton) findViewById(R.id.toolZoom);
+        btnToolText = (ImageButton) findViewById(R.id.toolText);
+        toolButtons = new ImageButton[] { btnToolLine, btnToolInkpad, btnToolZoom, btnToolText };
+
         btnToolLine.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -98,7 +104,6 @@ public class MainActivity extends Activity implements Observer {
             }
         });
 
-        btnToolInkpad = (ImageButton) findViewById(R.id.toolInkpad);
         registerForContextMenu(btnToolInkpad);
         btnToolInkpad.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -107,7 +112,6 @@ public class MainActivity extends Activity implements Observer {
             }
         });
 
-        btnToolZoom = (ImageButton) findViewById(R.id.toolZoom);
         btnToolZoom.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -115,7 +119,6 @@ public class MainActivity extends Activity implements Observer {
             }
         });
 
-        btnToolText = (ImageButton) findViewById(R.id.toolText);
         btnToolText.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -138,8 +141,8 @@ public class MainActivity extends Activity implements Observer {
                 sendRemainPoints();
             }
         });
-        btnConnect = (Button) findViewById(R.id.buttonConnect);
-        btnConnect.setOnClickListener(new View.OnClickListener() {
+        buttonAddDevice = (Button) findViewById(R.id.buttonAddDevice);
+        buttonAddDevice.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent intent0 = new Intent(MainActivity.this, DeviceListActivity.class);
@@ -230,37 +233,39 @@ public class MainActivity extends Activity implements Observer {
     private void selectToolLine() {
         ToolLine tline = new ToolLine(getApplicationContext(), document);
         drawView.setTool(tline);
-        btnToolLine.setBackground(getResources().getDrawable(R.drawable.pressed));
-        btnToolInkpad.setBackground(getResources().getDrawable(R.drawable.not_pressed));
-        btnToolZoom.setBackground(getResources().getDrawable(R.drawable.not_pressed));
-        btnToolText.setBackground(getResources().getDrawable(R.drawable.not_pressed));
+        selectToolButton(btnToolLine);
     }
 
     private void selectToolInkpad(Inkpad inkpad, String name) {
         ToolInkpad tinkpad = new ToolInkpad(getApplicationContext(), document, inkpad);
         drawView.setTool(tinkpad);
-        btnToolInkpad.setBackground(getResources().getDrawable(R.drawable.pressed));
-        btnToolLine.setBackground(getResources().getDrawable(R.drawable.not_pressed));
-        btnToolZoom.setBackground(getResources().getDrawable(R.drawable.not_pressed));
-        btnToolText.setBackground(getResources().getDrawable(R.drawable.not_pressed));
+        selectToolButton(btnToolInkpad);
     }
 
     private void selectToolZoom() {
         drawView.setTool(toolZoom);
-        btnToolZoom.setBackground(getResources().getDrawable(R.drawable.pressed));
-        btnToolLine.setBackground(getResources().getDrawable(R.drawable.not_pressed));
-        btnToolInkpad.setBackground(getResources().getDrawable(R.drawable.not_pressed));
-        btnToolText.setBackground(getResources().getDrawable(R.drawable.not_pressed));
+        selectToolButton(btnToolZoom);
     }
 
     private void selectToolText(String text) {
         ToolText ttext = new ToolText(getApplicationContext(), document, getTextpadsDirectory(), text);
         drawView.setTool(ttext);
-        btnToolZoom.setBackground(getResources().getDrawable(R.drawable.not_pressed));
-        btnToolLine.setBackground(getResources().getDrawable(R.drawable.not_pressed));
-        btnToolInkpad.setBackground(getResources().getDrawable(R.drawable.not_pressed));
-        btnToolText.setBackground(getResources().getDrawable(R.drawable.pressed));
+        selectToolButton(btnToolText);
     }
+
+    private void selectToolButton(ImageButton imageButton) {
+        Drawable notPressed = getResources().getDrawable(R.drawable.not_pressed);
+        Drawable pressed = getResources().getDrawable(R.drawable.pressed);
+        for (ImageButton b : toolButtons) {
+            if (b == imageButton) {
+                b.setBackgroundDrawable(pressed);
+            } else {
+                b.setBackgroundDrawable(notPressed);
+            }
+        }
+    }
+
+    private ImageButton[] toolButtons;
 
     private void setCurrentDrawFilename(String filename) {
         currentDrawFilename = filename;
@@ -792,20 +797,20 @@ public class MainActivity extends Activity implements Observer {
                 switch (msg.arg1) {
                 case BluetoothService.STATE_CONNECTED:
                     setStatus(getString(R.string.title_connected_to, mConnectedDeviceName));
-                    btnConnect.setBackgroundColor(getResources().getColor(R.color.light_green));
-                    btnConnect.setText("Conectado: " + mConnectedDeviceName);
+                    buttonAddDevice.setBackgroundColor(getResources().getColor(R.color.light_green));
+                    buttonAddDevice.setText("Conectado: " + mConnectedDeviceName);
                     queueAwake();
                     break;
                 case BluetoothService.STATE_CONNECTING:
                     setStatus(R.string.title_connecting);
-                    btnConnect.setBackgroundColor(getResources().getColor(R.color.light_red));
-                    btnConnect.setText("Conectar");
+                    buttonAddDevice.setBackgroundColor(getResources().getColor(R.color.light_red));
+                    buttonAddDevice.setText("Conectar");
                     break;
                 case BluetoothService.STATE_LISTEN:
                 case BluetoothService.STATE_NONE:
                     setStatus(R.string.title_not_connected);
-                    btnConnect.setBackgroundColor(getResources().getColor(R.color.light_red));
-                    btnConnect.setText("Conectar");
+                    buttonAddDevice.setBackgroundColor(getResources().getColor(R.color.light_red));
+                    buttonAddDevice.setText("Conectar");
                     break;
                 }
                 break;
@@ -839,7 +844,7 @@ public class MainActivity extends Activity implements Observer {
     private DrawView drawView;
     private Document document;
     private String currentDrawFilename = null;
-    private Button btnUndo, btnRedo, btnConnect, btnSend;
+    private Button btnUndo, btnRedo, buttonAddDevice, btnSend;
     private ImageButton btnToolLine, btnToolInkpad, btnToolZoom, btnToolText;
     private ScaleImageView drawBackground;
     private CheckBox chkAutomaticSend;

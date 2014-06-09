@@ -14,6 +14,10 @@
         android:layout_alignTop="@+id/drawView"
         android:background="@color/etch_background"
         android:contentDescription="background" />
+    <!--
+        android:layout_width="694dp"
+        android:layout_height="470dp"
+    -->
 
     <es.skastro.gcodepainter.view.DrawView
         android:id="@+id/drawView"
@@ -77,10 +81,10 @@
             android:text="DISPOSITIVOS" />
 
         <Button
-            android:id="@+id/buttonConnect"
+            android:id="@+id/buttonAddDevice"
             style="?android:attr/buttonBarButtonStyle"
             android:layout_width="fill_parent"
-            android:layout_height="50dp"
+            android:layout_height="40dp"
             android:drawableLeft="@drawable/bluetooth_on"
             android:padding="0dp"
             android:text="Nuevo..." />
@@ -121,7 +125,8 @@
         <View
             style="@style/buttonBarTitleStyle"
             android:layout_width="fill_parent"
-            android:layout_height="2dp" />
+            android:layout_height="2dp"
+            android:layout_weight="30.60" />
 
         <TextView
             android:layout_width="fill_parent"
@@ -147,7 +152,7 @@
         android:layout_alignParentRight="true"
         android:background="@android:color/white"
         android:orientation="vertical"
-        android:padding="4dp" >
+        android:padding="4dp">
 
         <ImageButton
             android:id="@+id/toolLine"
