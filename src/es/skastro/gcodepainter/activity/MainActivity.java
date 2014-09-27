@@ -629,19 +629,8 @@ public class MainActivity extends Activity implements Observer {
 
     private File getDrawsDirectory() {
         if (drawsDirectory == null) {
-            drawsDirectory = new File(getApplicationContext().getExternalFilesDir(null), "draws/");
-            if (!drawsDirectory.exists() && !drawsDirectory.mkdir()) {
-                SimpleOkAlertDialog.show(this, "Erro abrindo o cartafol",
-                        "Houbo un problema abrindo o cartafol de debuxos");
-                finish();
-            }
-            File noMediaFile = new File(drawsDirectory, ".Nomedia");
-            if (!noMediaFile.exists())
-                try {
-                    noMediaFile.createNewFile();
-                } catch (IOException e) {
-
-                }
+            drawsDirectory = new File(getDataPathFile(), "draws/");
+            createDirectory(drawsDirectory);
         }
         return drawsDirectory;
     }
@@ -650,19 +639,8 @@ public class MainActivity extends Activity implements Observer {
 
     private File getInkpadsDirectory() {
         if (inkpadsDirectory == null) {
-            inkpadsDirectory = new File(getApplicationContext().getExternalFilesDir(null), "inkpads/");
-            if (!inkpadsDirectory.exists() && !inkpadsDirectory.mkdir()) {
-                SimpleOkAlertDialog.show(this, "Erro abrindo o cartafol",
-                        "Houbo un problema abrindo o cartafol de tampóns de clonado");
-                finish();
-            }
-            File noMediaFile = new File(inkpadsDirectory, ".Nomedia");
-            if (!noMediaFile.exists())
-                try {
-                    noMediaFile.createNewFile();
-                } catch (IOException e) {
-
-                }
+            inkpadsDirectory = new File(getDataPathFile(), "inkpads/");
+            createDirectory(inkpadsDirectory);
         }
         return inkpadsDirectory;
     }
@@ -671,21 +649,32 @@ public class MainActivity extends Activity implements Observer {
 
     private File getTextpadsDirectory() {
         if (textpadsDirectory == null) {
-            textpadsDirectory = new File(getApplicationContext().getExternalFilesDir(null), "textpads/");
-            if (!textpadsDirectory.exists() && !textpadsDirectory.mkdir()) {
-                SimpleOkAlertDialog.show(this, "Erro abrindo o cartafol",
-                        "Houbo un problema abrindo o cartafol de caracteres");
-                finish();
-            }
-            File noMediaFile = new File(textpadsDirectory, ".Nomedia");
-            if (!noMediaFile.exists())
-                try {
-                    noMediaFile.createNewFile();
-                } catch (IOException e) {
-
-                }
+            textpadsDirectory = new File(getDataPathFile(), "textpads/");
+            createDirectory(textpadsDirectory);
         }
         return textpadsDirectory;
+    }
+
+    private void createDirectory(File path) {
+        if (!path.exists() && !path.mkdir()) {
+            SimpleOkAlertDialog.show(this, "Erro abrindo o cartafol",
+                    "Houbo un problema abrindo o cartafol " + path.getAbsolutePath());
+            finish();
+        }
+        File noMediaFile = new File(path, ".Nomedia");
+        if (!noMediaFile.exists()) {
+            try {
+                noMediaFile.createNewFile();
+            } catch (IOException e) {
+
+            }
+        }
+    }
+
+    private File getDataPathFile() {
+        File f = new File("/storage/sdcard0/gcodePainter/");
+        createDirectory(f);
+        return f;
     }
 
     // /////////////////////////

@@ -161,7 +161,7 @@ public class DrawView extends View implements OnTouchListener, Observer {
                     start = end;
                     end = coordinateDocument2View.calculate(document.getTemporalPoints().get(i).getPoint());
                     if (start != null) {
-                        boolean isMovement = document.getPoint(i).isMovement();
+                        boolean isMovement = document.getTemporalPoints().get(i).isMovement();
                         auxDrawLine(canvas, start, end, paint_temporal_lines, null, isMovement);
                     }
                 }

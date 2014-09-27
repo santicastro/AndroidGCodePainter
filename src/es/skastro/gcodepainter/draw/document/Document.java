@@ -358,7 +358,6 @@ public class Document extends Observable {
                         i--;
                     }
                 }
-
             }
         }
         return list.size() - res;
