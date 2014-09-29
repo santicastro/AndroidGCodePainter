@@ -134,8 +134,8 @@ public class MainActivity extends Activity implements Observer {
             }
         });
 
-        btnSend = (Button) findViewById(R.id.btnSend);
-        btnSend.setOnClickListener(new View.OnClickListener() {
+        Button btnPrint = (Button) findViewById(R.id.btnPrint);
+        btnPrint.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 sendRemainPoints();

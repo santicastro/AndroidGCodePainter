@@ -106,11 +106,11 @@
             android:text="Envío automático" />
 
         <Button
-            android:id="@+id/btnSend"
+            android:id="@+id/btnPrint"
             style="?android:attr/buttonBarButtonStyle"
             android:layout_width="fill_parent"
             android:layout_height="50dp"
-            android:text="Enviar pendentes" />
+            android:text="Imprimir" />
     </LinearLayout>
 
     <LinearLayout
