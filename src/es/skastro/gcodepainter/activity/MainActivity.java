@@ -440,6 +440,11 @@ public class MainActivity extends Activity implements Observer {
         startActivityForResult(cameraIntent, GET_IMAGE_FROM_CAMERA_RESPONSE);
     }
 
+    public void importCapture() {
+        Intent intent = new Intent(MainActivity.this, CameraActivity.class);
+        startActivityForResult(intent, IMPORT_CAMERA_PROCESSED_IMAGE);
+    }
+
     @Override
     public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
         menu.setHeaderTitle("Abrir tampón...");
@@ -509,6 +514,9 @@ public class MainActivity extends Activity implements Observer {
             break;
         case R.id.mnuBackgroundRemove:
             changeBackground((Bitmap) null);
+            break;
+        case R.id.mnuCapture:
+            importCapture();
             break;
         case R.id.mnuInkpad:
             saveInkpad();
@@ -845,6 +853,7 @@ public class MainActivity extends Activity implements Observer {
     Pattern filenamePattern = Pattern.compile("^[A-ZÑña-z0-9_ \\-]+$");
 
     final static int CONNECT_BLUETOOTH_SECURE = 100;
+    final static int IMPORT_CAMERA_PROCESSED_IMAGE = 102;
     final static int CONNECT_BLUETOOTH_INSECURE = 101;
     BluetoothAdapter mBluetoothAdapter;
     private BluetoothService mChatService = null;

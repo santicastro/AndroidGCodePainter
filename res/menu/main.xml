@@ -45,6 +45,12 @@
         </menu>
     </item>
     <item
+        android:id="@+id/mnuCapture"
+        android:icon="@drawable/camera"
+        android:orderInCategory="100"
+        android:showAsAction="always|withText"
+        android:title="Capturar"/>
+    <item
         android:id="@+id/mnuInkpad"
         android:icon="@drawable/inkpad_plus"
         android:orderInCategory="100"

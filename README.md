@@ -6,5 +6,6 @@ You can see a working example here: http://www.youtube.com/watch?v=dBtlcxkml6k
 It was thought to be used with this project: https://github.com/santicastro/ArduinoEtchASketch
 
 This project depends on this one: https://github.com/santicastro/Android-utils
+It also requires OpenCV, to compile it you have to download OpenCV sdk.
 
 ![Capture](./doc/capture.png)
