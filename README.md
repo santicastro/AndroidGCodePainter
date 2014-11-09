@@ -1,5 +1,8 @@
 AndroidGCodePainter
 ===================
+
+CURRENT STATUS: I'm updating the app to support a device with the ability of lifting the tool.
+
 This app allows you to draw on the tablet touch screen and generates the corresponding GCode to print it on a CNC machine directly over bluetooth.
 You can see a working example here: http://www.youtube.com/watch?v=dBtlcxkml6k 
 
