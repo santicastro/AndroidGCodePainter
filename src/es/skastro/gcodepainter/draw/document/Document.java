@@ -48,6 +48,11 @@ public class Document extends Observable {
         traces = new ArrayList<Trace>();
     }
 
+    public Document(RectF margins) {
+        this();
+        this.margins = margins;
+    }
+
     public static Document fromFile(File file) {
         try {
             return mapper.readValue(file, Document.class);
@@ -77,6 +82,14 @@ public class Document extends Observable {
             e.printStackTrace();
         }
         return null;
+    }
+
+    public void setDeleteOutboundPoints(boolean deleteOutboundPoints) {
+        this.deleteOutboundPoints = deleteOutboundPoints;
+    }
+
+    public void setSimplifyPoints(boolean simplifyPoints) {
+        this.simplifyPoints = simplifyPoints;
     }
 
     public static void replace(String oldstring, String newstring, File in, File out) throws IOException {
@@ -132,8 +145,12 @@ public class Document extends Observable {
     public void commitTrace(int id) {
         if (currentTrace != null && currentTrace.getTraceId() == id) {
             traces.add(currentTrace);
-            deleteOutboundPoints(currentTrace.getPoints());
-            simplifyPoints(currentTrace.getPoints());
+            if (deleteOutboundPoints) {
+                deleteOutboundPoints(currentTrace.getPoints());
+            }
+            if (simplifyPoints) {
+                simplifyPoints(currentTrace.getPoints());
+            }
             currentTrace = null;
             showingTraceId = id;
             setChanged();
@@ -467,13 +484,16 @@ public class Document extends Observable {
     private float deltaAngleForceNotIgnore = 0.1f;
 
     @JsonProperty("margins")
-    private final RectF margins = new RectF(0f, 67.8f, 100f, 0f);
+    private RectF margins = new RectF(0f, 67.8f, 100f, 0f);
 
     @JsonIgnore
     private Trace currentTrace;
 
     @JsonProperty("showing")
     private int showingTraceId;
+
+    @JsonIgnore
+    private boolean deleteOutboundPoints = true, simplifyPoints = true;
 
     private static ObjectMapper mapper;
     private static ObjectWriter mapperWriter;

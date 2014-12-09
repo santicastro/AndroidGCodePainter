@@ -1,7 +1,9 @@
 package es.skastro.gcodepainter.activity;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileFilter;
+import java.io.FileReader;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -10,6 +12,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import android.app.ActionBar;
@@ -25,6 +28,7 @@ import android.graphics.PointF;
 import android.graphics.RectF;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.provider.MediaStore;
@@ -38,6 +42,8 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -79,6 +85,13 @@ public class MainActivity extends Activity implements Observer {
         // requestWindowFeature(Window.FEATURE_NO_TITLE);
 
         setContentView(R.layout.activity_main);
+
+        messageManager = new MessageManager();
+        messageManager.addObserver(this);
+
+        pbSent = (ProgressBar) findViewById(R.id.pbSent);
+        txtSent = (TextView) findViewById(R.id.txtSent);
+        layoutSent = (LinearLayout) findViewById(R.id.sendLayout);
 
         chkAutomaticSend = (CheckBox) findViewById(R.id.chkAutomaticSend);
         chkAutomaticSend.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -341,6 +354,213 @@ public class MainActivity extends Activity implements Observer {
         }
     }
 
+    private void printFile() {
+        File dir = Environment.getExternalStorageDirectory();
+        final File[] files = dir.listFiles(new FileFilter() {
+            @Override
+            public boolean accept(File pathname) {
+                return (pathname.getName().toLowerCase().endsWith(".gcode") || pathname.getName().toLowerCase()
+                        .endsWith(".gco"))
+                        && !pathname.getName().startsWith(".");
+            }
+        });
+        if (files.length == 0) {
+            SimpleOkAlertDialog.show(this, "Non hai debuxos",
+                    "Non se atoparon debuxos imprimibles na tarxeta de memoria:\n " + dir.getAbsolutePath());
+        } else {
+            SimpleListAdapter<File> fileAdapter = new SimpleListAdapter<File>(MainActivity.this, Arrays.asList(files),
+                    new SimpleListAdapter.StringGenerator<File>() {
+                        @Override
+                        public String getString(File addr) {
+                            return addr.getName();
+                        }
+                    });
+            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+            builder.setTitle("Abrir debuxo...").setAdapter(fileAdapter, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    printFile(files[which].getAbsolutePath());
+                }
+            });
+            builder.create().show();
+            setCurrentDrawFilename(null);
+        }
+    }
+
+    private final double BAND_HEIGHT = 80.0;
+    private final double PAINTER_SIZE_HEIGHT = 400.0;
+
+    public static void main(String[] args) {
+        Pattern.compile(".*X([-]?[0-9]*([.][0-9]+)?).*").matcher("G1 X333.720 Y163.483 E10.35530").group(1);
+    }
+
+    private void printFile(String filename) {
+        BufferedReader b;
+        final String penUpCode = "M300 S50";
+        final String penDownCode = "M300 S40";
+
+        final Pattern G28PAT = Pattern.compile("[ \t]*G28.*");
+        final Pattern G92PAT = Pattern.compile("[ \t]*G92[ \t]+E0.*");
+        final Pattern G1PAT = Pattern.compile("[ \t]*G1(.*)");
+        final Pattern XPAT = Pattern.compile(".*X([-]?[0-9]*([.][0-9]+)?).*");
+        final Pattern YPAT = Pattern.compile(".*Y([-]?[0-9]*([.][0-9]+)?).*");
+        final Pattern EPAT = Pattern.compile(".*E([-]?[0-9]*([.][0-9]+)?).*");
+        final Pattern COMMENTPAT = Pattern.compile("(;.*)");
+        Matcher m;
+
+        boolean byBand = PAINTER_SIZE_HEIGHT > BAND_HEIGHT;
+        boolean proccessGCode = true;
+
+        double currentX = 0.0;
+        double currentY = 0.0;
+        double currentE = 0.0;
+        Double newX = null, newY = null, newE = null;
+
+        Document d = new Document(new RectF(0f, 400f, 690f, 0f));
+        d.setDeleteOutboundPoints(false);
+        d.setSimplifyPoints(false);
+
+        Integer traceId = null;
+        try {
+            b = new BufferedReader(new FileReader(new File(filename)));
+            String line;
+            while ((line = b.readLine()) != null) {
+                line = line.replaceAll("\\([^(]*\\)", "").trim();
+                m = COMMENTPAT.matcher(line);
+                if (m.matches()) {
+                    line = line.replace(m.group(1), "").trim();
+                }
+                if (line.length() > 1) {
+                    if (!proccessGCode) {
+                        messageManager.sendMessage(line);
+                    } else {
+                        if (G92PAT.matcher(line).matches()) {
+                            currentE = 0;
+                        } else if (G28PAT.matcher(line).matches()) {
+                            currentX = 0;
+                            currentY = 0;
+                        } else if (G1PAT.matcher(line).matches()) {
+                            // is movement. now i check if is print movement
+                            newX = getDouble(XPAT, line);
+                            newY = getDouble(YPAT, line);
+                            newE = getDouble(EPAT, line);
+                            boolean isMovement = (newE == null || newE < currentE);
+                            if (newX != null || newY != null) {
+                                if (newX == null) {
+                                    newX = currentX;
+                                }
+                                if (newY == null) {
+                                    newY = currentY;
+                                }
+                                if (!isMovement && traceId == null) {
+                                    traceId = d.createTrace();
+                                    d.addPoint(traceId, new TracePoint(new PointF((float) currentX, (float) currentY)));
+                                }
+                                if (isMovement && traceId != null) {
+                                    d.commitTrace(traceId);
+                                    traceId = null;
+                                }
+                                if (!isMovement) {
+                                    d.addPoint(traceId,
+                                            new TracePoint(new PointF(newX.floatValue(), newY.floatValue())));
+                                }
+                            }
+
+                            if (newX != null) {
+                                currentX = newX;
+                            }
+                            if (newY != null) {
+                                currentY = newY;
+                            }
+                            if (newE != null) {
+                                currentE = newE;
+                            }
+                        }
+                    }
+                }
+                // System.out.println(line);
+            }
+            if (traceId != null) {
+                d.commitTrace(traceId);
+            }
+            b.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+            SimpleOkAlertDialog
+                    .show(this, "Erro abrindo o ficheiro",
+                            "Houbo un problema tentando cargar a imaxe. O arquivo pode estar danado ou non se recoñece o seu formato");
+            return;
+        }
+        try {
+            if (proccessGCode) {
+
+                messageManager.sendMessage(penUpCode);
+                for (double topBand = PAINTER_SIZE_HEIGHT; topBand > 0; topBand -= BAND_HEIGHT) {
+                    double bottomBand = topBand - BAND_HEIGHT;
+                    boolean isPenUp = true;
+                    for (int ti = 0; ti < d.getTraceCount(); ti++) {
+                        Trace t = d.getTrace(ti);
+                        if (t.getPointCount() > 0) {
+                            int validPoints = 0;
+                            for (int pi = 0; pi < t.getPointCount() - 1; pi++) {
+                                TracePoint p0 = t.getPoints().get(pi);
+                                TracePoint p1 = t.getPoints().get(pi + 1);
+                                int p0pos = getPointRelativePosition(p0, topBand, bottomBand);
+                                int p1pos = getPointRelativePosition(p1, topBand, bottomBand);
+                                if (p0pos == 0) {
+                                    validPoints++;
+                                }
+                                if ((p0pos == 0 || p1pos == 0) && !(p0pos == -1 || p1pos == -1)) {
+                                    messageManager.sendMessage("G1 X" + p0.getPoint().x + " Y" + p0.getPoint().y + " F"
+                                            + (isPenUp ? 2000 : 1500));
+                                    if (isPenUp) {
+                                        isPenUp = false;
+                                        messageManager.sendMessage(penDownCode);
+                                    }
+                                    if (pi == t.getPointCount() - 2) {
+                                        messageManager.sendMessage("G1 X" + p1.getPoint().x + " Y" + p1.getPoint().y
+                                                + " F1500");
+                                    }
+                                } else if (!isPenUp) {
+                                    messageManager.sendMessage("G1 X" + p0.getPoint().x + " Y" + p0.getPoint().y
+                                            + " F1500");
+                                    isPenUp = true;
+                                    messageManager.sendMessage(penUpCode);
+                                }
+                            }
+                            if (!isPenUp) {
+                                messageManager.sendMessage(penUpCode);
+                                isPenUp = true;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            SimpleOkAlertDialog.show(this, "Erro procesando por bloques",
+                    "Houbo un problema tentando procesar a image por bloques.");
+        }
+    }
+
+    private int getPointRelativePosition(TracePoint p, double topBand, double bottomBand) {
+        if (p.getPoint().y > topBand) {
+            return -1;
+        } else if (p.getPoint().y >= bottomBand) {
+            return 0;
+        } else {
+            return 1;
+        }
+    }
+
+    private static Double getDouble(Pattern pat, String text) {
+        Matcher m = pat.matcher(text);
+        if (m.matches()) {
+            return Double.valueOf(m.group(1));
+        }
+        return null;
+    }
+
     private void saveDraw() {
         try {
             if (document != null) {
@@ -495,6 +715,9 @@ public class MainActivity extends Activity implements Observer {
         case R.id.mnuSave:
             saveDraw();
             break;
+        case R.id.mnuPrintFile:
+            printFile();
+            break;
         case R.id.mnuBackgroundFile:
             // changeBackground("/storage/emulated/0/DCIM/Camera/IMG_20130617_003844.jpg");
             selectBackgroundFromGallery();
@@ -559,6 +782,23 @@ public class MainActivity extends Activity implements Observer {
     public void update(Observable observable, Object data) {
         if (observable instanceof ToolZoom) {
             updateZoomInfo();
+        } else if (observable instanceof MessageManager) {
+            final int max = messageManager.getTotalMessages();
+            final int value = Math.max(0, max - messageManager.getUnsentMessages());
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (max != value) {
+                        pbSent.setMax(max);
+                        pbSent.setProgress(value);
+                        txtSent.setText("Enviados: " + value + "/" + max);
+                        layoutSent.setVisibility(View.VISIBLE);
+                    } else {
+                        layoutSent.setVisibility(View.GONE);
+                    }
+                }
+            });
+
         } else {
             btnUndo.setEnabled(((Document) observable).canUndo());
             btnRedo.setEnabled(((Document) observable).canRedo());
@@ -608,7 +848,7 @@ public class MainActivity extends Activity implements Observer {
             if (lastTraceIdSent < tr.getTraceId()) {
                 for (TracePoint p : tr.getPoints()) {
                     PointF point = gcode_conversor.calculate(p.getPoint());
-                    sendMessage("G1 X" + point.x + " Y" + point.y);
+                    messageManager.sendMessage("G1 X" + point.x + " Y" + point.y);
                 }
                 lastTraceIdSent = tr.getTraceId();
             }
@@ -705,79 +945,103 @@ public class MainActivity extends Activity implements Observer {
         actionBar.setSubtitle(subTitle);
     }
 
-    private synchronized void sendMessage(String message) {
-        queueAwake();
-        if (message.length() > 0) {
-            Log.d("messageQueue", "messageQueue: " + message);
-            messagesToSend.add(message + "\n");
-        }
-    }
+    // ///////////
+    MessageManager messageManager;
 
-    private void queueAwake() {
-        if (messageQueue == null || !messageQueue.isAlive()) {
-            messageQueue = new MessageQueue(messagesToSend);
-            messageQueue.start();
-        }
-    }
+    private class MessageManager extends Observable {
 
-    List<String> messagesToSend = Collections.synchronizedList(new ArrayList<String>());
-    MessageQueue messageQueue;
-
-    private class MessageQueue extends Thread {
-        List<String> messagesToSend;
-
-        public MessageQueue(List<String> messagesToSend) {
-            this.messagesToSend = messagesToSend;
+        public synchronized void sendMessage(String message) {
+            queueAwake();
+            if (message.length() > 0) {
+                Log.d("messageQueue", "messageQueue: " + message);
+                if (messagesToSend.size() > 0) {
+                    totalMessages++;
+                } else {
+                    totalMessages = 1;
+                }
+                messagesToSend.add(message + "\n");
+                setChanged();
+                notifyObservers();
+            }
         }
 
-        final boolean WAIT_MODE = true;
-        final float MAX_SECONDS_TO_WAIT = 10.0f;
-        float waited;
+        public void queueAwake() {
+            if (messageQueue == null || !messageQueue.isAlive()) {
+                messageQueue = new MessageQueue(messagesToSend);
+                messageQueue.start();
+            }
+        }
 
-        @Override
-        public void run() {
-            boolean stop = (messagesToSend == null);
-            try {
-                while (!stop) {
-                    if (messagesToSend.size() > 0) {
-                        if (isInterrupted()) {
-                            stop = true;
-                            break;
-                        }
-                        if (mChatService == null || mChatService.getState() != BluetoothService.STATE_CONNECTED) {
-                            Log.w("MessageQueue ", "MessageQueue: Bluetooth not connected");
+        public int getUnsentMessages() {
+            return messagesToSend.size();
+        }
+
+        public int getTotalMessages() {
+            return totalMessages;
+        }
+
+        int totalMessages = 0;
+        List<String> messagesToSend = Collections.synchronizedList(new ArrayList<String>());
+        MessageQueue messageQueue;
+
+        private class MessageQueue extends Thread {
+            List<String> messagesToSend;
+
+            public MessageQueue(List<String> messagesToSend) {
+                this.messagesToSend = messagesToSend;
+            }
+
+            final boolean WAIT_MODE = true;
+            final float MAX_SECONDS_TO_WAIT = 3.0f;
+            float waited;
+
+            @Override
+            public void run() {
+                boolean stop = (messagesToSend == null);
+                try {
+                    while (!stop) {
+                        if (messagesToSend.size() > 0) {
+                            if (isInterrupted()) {
+                                stop = true;
+                                break;
+                            }
+                            if (mChatService == null || mChatService.getState() != BluetoothService.STATE_CONNECTED) {
+                                Log.w("MessageQueue ", "MessageQueue: Bluetooth not connected");
+                                if (MAX_SECONDS_TO_WAIT < waited)
+                                    return;
+                                Thread.sleep(1000);
+                                waited += 1.0f;
+                            } else {
+                                Log.w("MessageQueue", "MessageQueue: sending " + messagesToSend.get(0));
+                                if (WAIT_MODE) {
+                                    while (!mChatService.writeAndWait(messagesToSend.get(0).getBytes())) {
+                                        Thread.sleep(500);
+                                        waited += 0.5;
+                                        Log.w("MessageQueue", "MessageQueue: retrying " + messagesToSend.get(0));
+                                    }
+                                    waited = 0;
+                                } else {
+                                    mChatService.write(messagesToSend.get(0).getBytes());
+                                    sleep(20);
+                                    waited = 0;
+                                }
+                                Log.w("MessageQueue", "MessageQueue: removing " + messagesToSend.get(0));
+                                messagesToSend.remove(0);
+                                setChanged();
+                                notifyObservers();
+                            }
+                        } else {
+                            // Log.w("MessageQueue", "MessageQueue: No messages ");
                             if (MAX_SECONDS_TO_WAIT < waited)
                                 return;
-                            Thread.sleep(1000);
-                            waited += 1.0f;
-                        } else {
-                            Log.w("MessageQueue", "MessageQueue: sending " + messagesToSend.get(0));
-                            if (WAIT_MODE) {
-                                while (!mChatService.writeAndWait(messagesToSend.get(0).getBytes())) {
-                                    Thread.sleep(500);
-                                    waited += 0.5;
-                                    Log.w("MessageQueue", "MessageQueue: retrying " + messagesToSend.get(0));
-                                }
-                                waited = 0;
-                            } else {
-                                mChatService.write(messagesToSend.get(0).getBytes());
-                                sleep(20);
-                                waited = 0;
-                            }
-                            Log.w("MessageQueue", "MessageQueue: removing " + messagesToSend.get(0));
-                            messagesToSend.remove(0);
+                            waited += 0.2;
+                            sleep(200);
                         }
-                    } else {
-                        // Log.w("MessageQueue", "MessageQueue: No messages ");
-                        if (MAX_SECONDS_TO_WAIT < waited)
-                            return;
-                        waited += 0.2;
-                        sleep(200);
                     }
+                } catch (InterruptedException e) {
                 }
-            } catch (InterruptedException e) {
+                super.run();
             }
-            super.run();
         }
     }
 
@@ -794,7 +1058,7 @@ public class MainActivity extends Activity implements Observer {
                     setStatus(getString(R.string.title_connected_to, mConnectedDeviceName));
                     btnConnect.setBackgroundColor(getResources().getColor(R.color.light_green));
                     btnConnect.setText("Conectado: " + mConnectedDeviceName);
-                    queueAwake();
+                    messageManager.queueAwake();
                     break;
                 case BluetoothService.STATE_CONNECTING:
                     setStatus(R.string.title_connecting);
@@ -846,6 +1110,9 @@ public class MainActivity extends Activity implements Observer {
     private VerticalSeekBar zoomBar;
     private ToolZoom toolZoom;
     private TextView zoomText;
+    private ProgressBar pbSent;
+    private TextView txtSent;
+    private LinearLayout layoutSent;
 
     private final DecimalFormat df = new DecimalFormat("0.0");
     Pattern filenamePattern = Pattern.compile("^[A-ZÑña-z0-9_ \\-]+$");

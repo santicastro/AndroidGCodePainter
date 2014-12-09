@@ -19,6 +19,12 @@
         android:showAsAction="always|withText"
         android:title="Gardar"/>
     <item
+        android:id="@+id/mnuPrintFile"
+        android:icon="@drawable/open"
+        android:orderInCategory="100"
+        android:showAsAction="always|withText"
+        android:title="Imprimir arquivo"/>
+    <item
         android:icon="@drawable/background"
         android:orderInCategory="100"
         android:showAsAction="always|withText"
