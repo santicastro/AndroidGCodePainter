@@ -508,6 +508,9 @@ public class MainActivity extends Activity implements Observer {
                                     int p0pos = getPointRelativePosition(p0, topBand, bottomBand);
                                     int p1pos = getPointRelativePosition(p1, topBand, bottomBand);
                                     boolean isCandidate = (p0pos == 0 || p1pos == 0) && !(p0pos == -1 || p1pos == -1);
+                                    if (phase == 1 && p0pos == 0 && p1pos == 0) {
+                                        isCandidate = false;
+                                    }
                                     if (isCandidate && (p0pos == 1 || p1pos == 1)) {
                                         double distance;
                                         if (p0pos == 1) {
