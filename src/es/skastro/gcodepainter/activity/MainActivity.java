@@ -398,6 +398,7 @@ public class MainActivity extends Activity implements Observer {
         BufferedReader b;
         final String penUpCode = "M300 S50";
         final String penDownCode = "M300 S40";
+        final String homingCode = "G28";
 
         final Pattern G28PAT = Pattern.compile("[ \t]*G28.*");
         final Pattern G92PAT = Pattern.compile("[ \t]*G92[ \t]+E0.*");
@@ -493,48 +494,60 @@ public class MainActivity extends Activity implements Observer {
         }
         try {
             if (proccessGCode) {
-
                 messageManager.sendMessage(penUpCode);
                 for (double topBand = PAINTER_SIZE_HEIGHT; topBand > 0; topBand -= BAND_HEIGHT) {
                     double bottomBand = topBand - BAND_HEIGHT;
-                    boolean isPenUp = true;
-                    for (int ti = 0; ti < d.getTraceCount(); ti++) {
-                        Trace t = d.getTrace(ti);
-                        if (t.getPointCount() > 0) {
-                            int validPoints = 0;
-                            for (int pi = 0; pi < t.getPointCount() - 1; pi++) {
-                                TracePoint p0 = t.getPoints().get(pi);
-                                TracePoint p1 = t.getPoints().get(pi + 1);
-                                int p0pos = getPointRelativePosition(p0, topBand, bottomBand);
-                                int p1pos = getPointRelativePosition(p1, topBand, bottomBand);
-                                if (p0pos == 0) {
-                                    validPoints++;
-                                }
-                                if ((p0pos == 0 || p1pos == 0) && !(p0pos == -1 || p1pos == -1)) {
-                                    messageManager.sendMessage("G1 X" + p0.getPoint().x + " Y" + p0.getPoint().y + " F"
-                                            + (isPenUp ? 2000 : 1500));
-                                    if (isPenUp) {
-                                        isPenUp = false;
-                                        messageManager.sendMessage(penDownCode);
+                    for (int phase = 0; phase < 2; phase++) {
+                        boolean isPenUp = true;
+                        for (int ti = 0; ti < d.getTraceCount(); ti++) {
+                            Trace t = d.getTrace(ti);
+                            if (t.getPointCount() > 0) {
+                                for (int pi = 0; pi < t.getPointCount() - 1; pi++) {
+                                    TracePoint p0 = t.getPoints().get(pi);
+                                    TracePoint p1 = t.getPoints().get(pi + 1);
+                                    int p0pos = getPointRelativePosition(p0, topBand, bottomBand);
+                                    int p1pos = getPointRelativePosition(p1, topBand, bottomBand);
+                                    boolean isCandidate = (p0pos == 0 || p1pos == 0) && !(p0pos == -1 || p1pos == -1);
+                                    if (isCandidate && (p0pos == 1 || p1pos == 1)) {
+                                        double distance;
+                                        if (p0pos == 1) {
+                                            distance = Math.abs(bottomBand - p0.getPoint().y);
+                                        } else {
+                                            distance = Math.abs(bottomBand - p1.getPoint().y);
+                                        }
+                                        if ((phase == 0) && (distance >= (BAND_HEIGHT / 4))) {
+                                            isCandidate = false;
+                                        } else if ((phase == 1) && (distance < (BAND_HEIGHT / 4))) {
+                                            isCandidate = false;
+                                        }
                                     }
-                                    if (pi == t.getPointCount() - 2) {
-                                        messageManager.sendMessage("G1 X" + p1.getPoint().x + " Y" + p1.getPoint().y
+                                    if (isCandidate) {
+                                        messageManager.sendMessage("G1 X" + p0.getPoint().x + " Y" + p0.getPoint().y
+                                                + " F" + (isPenUp ? 2000 : 1500));
+                                        if (isPenUp) {
+                                            isPenUp = false;
+                                            messageManager.sendMessage(penDownCode);
+                                        }
+                                        if (pi == t.getPointCount() - 2) {
+                                            messageManager.sendMessage("G1 X" + p1.getPoint().x + " Y"
+                                                    + p1.getPoint().y + " F1500");
+                                        }
+                                    } else if (!isPenUp) {
+                                        messageManager.sendMessage("G1 X" + p0.getPoint().x + " Y" + p0.getPoint().y
                                                 + " F1500");
+                                        isPenUp = true;
+                                        messageManager.sendMessage(penUpCode);
                                     }
-                                } else if (!isPenUp) {
-                                    messageManager.sendMessage("G1 X" + p0.getPoint().x + " Y" + p0.getPoint().y
-                                            + " F1500");
-                                    isPenUp = true;
-                                    messageManager.sendMessage(penUpCode);
                                 }
-                            }
-                            if (!isPenUp) {
-                                messageManager.sendMessage(penUpCode);
-                                isPenUp = true;
+                                if (!isPenUp) {
+                                    messageManager.sendMessage(penUpCode);
+                                    isPenUp = true;
+                                }
                             }
                         }
                     }
                 }
+                messageManager.sendMessage(homingCode);
             }
         } catch (Exception e) {
             e.printStackTrace();
